@@ -1,6 +1,9 @@
 # Prerequisites
 *.d
 
+# 忽略所有项目根目录下的 Objects 文件夹
+**/Debug/
+
 # Object files
 *.o
 *.ko
