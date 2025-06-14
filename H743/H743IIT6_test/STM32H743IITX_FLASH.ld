@@ -37,8 +37,8 @@ ENTRY(Reset_Handler)
 /* Highest address of the user mode stack */
 _estack = ORIGIN(RAM_D1) + LENGTH(RAM_D1);    /* end of RAM */
 /* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0x200;      /* required amount of heap  */
-_Min_Stack_Size = 0x400; /* required amount of stack */
+_Min_Heap_Size = 0x800;      /* required amount of heap  */
+_Min_Stack_Size = 0x800; /* required amount of stack */
 
 /* Specify the memory areas */
 MEMORY
@@ -175,6 +175,17 @@ SECTIONS
   }
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
+}
+
+
+MEMORY {
+  SDRAM (xrw) : ORIGIN = 0xC0000000, LENGTH = 32M  /* 定义SDRAM区域 */
+}
+
+SECTIONS {
+  .sdram_section (NOLOAD) : {
+    *(.sdram_section)  /* 将变量放入此段 */
+  } > SDRAM
 }
 
 

@@ -51,7 +51,7 @@ struct Button {
 };
 
 /* 函数声明 */
-void Button_Init(Button* btn, GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, uint8_t active_level);
+void Button_Set(Button* btn, GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, uint8_t active_level);
 void Button_Update(Button* btn);
 
 void Button_SetDebounce(Button* btn, uint16_t debounce_ms);

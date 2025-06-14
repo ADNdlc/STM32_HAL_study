@@ -10,7 +10,7 @@
 #include "main.h"
 
 // 按键初始化
-void Button_Init(Button* btn, GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, uint8_t active_level) {
+void Button_Set(Button* btn, GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, uint8_t active_level) {
     btn->GPIOx = GPIOx;
     btn->GPIO_Pin = GPIO_Pin;
     btn->active_level = active_level;

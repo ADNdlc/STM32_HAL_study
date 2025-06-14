@@ -18,12 +18,19 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "dma.h"
+#include "memorymap.h"
+#include "tim.h"
+#include "usart.h"
+#include "gpio.h"
+#include "fmc.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "string.h"
 #include"../inc/retarget.h"		//printf函数重映射
-#include "../../User/Key/Key.h"
+#include "../../User/Key/Button_event.h"
+#include "../../User/W9825G6KH/W9825G6KH.h"
 
 /* USER CODE END Includes */
 
@@ -35,6 +42,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,86 +52,45 @@
 
 /* Private variables ---------------------------------------------------------*/
 
-TIM_HandleTypeDef htim2;
-
-UART_HandleTypeDef huart1;
-DMA_HandleTypeDef hdma_usart1_rx;
-DMA_HandleTypeDef hdma_usart1_tx;
-
 /* USER CODE BEGIN PV */
+
+uint16_t fps = 0, fps_max = 0;
+
+uint16_t testsram[250000] __attribute__((section(".sdram_section")));//sdram测试用数组
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MPU_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
-static void MX_TIM2_Init(void);
-static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
+
+//SDRAM内存测试
+void fsmc_sdram_test()
+{
+	__IO uint32_t i=0;
+	__IO uint32_t temp=0;
+	__IO uint32_t sval=0;	//在地址0读到的数据
+
+	//每隔16K字节,写入一个数据,总共写入2048个数据,刚好是32M字节
+	for(i=0;i<32*1024*1024;i+=16*1024)
+	{
+		*(__IO uint32_t*)(SDRAM_BANK_ADDR+i)=temp;
+		temp++;
+	}
+	//依次读出之前写入的数据,进行校验
+ 	for(i=0;i<32*1024*1024;i+=16*1024)
+	{
+  		temp=*(__IO uint32_t*)(SDRAM_BANK_ADDR+i);
+		if(i==0)sval=temp;
+ 		else if(temp<=sval)break;//后面读出的数据一定要比第一次读到的数据大.
+		printf("SDRAM Capacity:%dKB\r\n",(uint16_t)(temp-sval+1)*16);//打印SDRAM容量
+ 	}
+}
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-uint16_t fps = 0, fps_max = 0;
-
-/*实例化按钮*/
-Button btn1;
-Button btn2;
-Button btn3;
-/*点击事件*/
-/*================btn1========================*/
-void btn1_single_click(Button* btn) {
-	printf("\r\nbtn1_single_click\r\n");
-    // 单击处理
-	printf("%d",fps);
-
-}
-
-void btn1_double_click(Button* btn) {
-	printf("\r\nbtn1_double_click\r\n");
-    // 双击处理
-	fps=0;
-}
-
-void btn1_triple_click(Button* btn) {
-	printf("\r\nbtn1_triple_click\r\n");
-    // 三击处理
-
-}
-void btn1_long_click(Button* btn) {
-	printf("\r\nbtn1_long_click\r\n");
-    // 长按处理
-}
-
-/*================btn2========================*/
-void btn2_single_click(Button* btn) {
-	printf("\r\nbtn2_single_click\r\n");
-    // 单击处理
-
-}
-
-void btn2_double_click(Button* btn) {
-	printf("\r\nbtn2_double_click\r\n");
-    // 双击处理
-}
-
-void btn2_triple_click(Button* btn) {
-	printf("\r\nbtn2_triple_click\r\n");
-    // 三击处理
-
-
-}
-void btn2_long_click(Button* btn) {
-	printf("\r\nbtn2_long_click\r\n");
-    // 长按处理
-
-}
-
-
 
 //重定义'定时器周期回调'函数
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){	//1S周期回调
@@ -132,6 +99,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){	//1S周期回调
 		{
 			fps_max = fps;
 		}
+
+		printf("H7");
 		fps++;
 	}
 }
@@ -140,8 +109,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){	//1S周期回调
 
 char receivData[50] = {0};//存放接收内容(记得初始化)
 uint8_t dataReady;//发送标志位
-
-
 //重定义'串口事件回调'函数
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
 	if(huart == &huart1){
@@ -153,6 +120,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
 		__HAL_DMA_DISABLE_IT(&hdma_usart1_rx,DMA_IT_HT);//关闭DMA接收过半中断
 	}
 }
+
 /* USER CODE END 0 */
 
 /**
@@ -165,9 +133,6 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
-
-  /* MPU Configuration--------------------------------------------------------*/
-  MPU_Config();
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -190,24 +155,28 @@ int main(void)
   MX_DMA_Init();
   MX_TIM2_Init();
   MX_USART1_UART_Init();
+  MX_FMC_Init();
   /* USER CODE BEGIN 2 */
-
   RetargetInit(&huart1);//将printf()函数映射到UART1串口上
-
-  //初始化按键
-  Button_Init(&btn1,btn1_GPIO_Port,btn1_Pin,GPIO_PIN_RESET);
-  btn1.SinglePressHandler = btn1_single_click;
-  btn1.DoublePressHandler = btn1_double_click;
-  btn1.TriplePressHandler = btn1_triple_click;
-  btn1.LongPressHandler = btn1_long_click;
-  Button_Init(&btn2,btn2_GPIO_Port,btn2_Pin,GPIO_PIN_RESET);
-  btn2.SinglePressHandler = btn2_single_click;
-  btn2.DoublePressHandler = btn2_double_click;
-  btn2.TriplePressHandler = btn2_triple_click;
-  btn2.LongPressHandler = btn2_long_click;
-
-
+  Button_Init();//初始化按键
   HAL_TIM_Base_Start_IT(&htim2);//开启定时
+
+  SDRAM_InitSequence();//W9825G6KH初始化
+
+	uint32_t ts=0;
+	for(ts=0;ts<250000;ts++)
+	{
+		testsram[ts]=ts;//预存测试数据
+	}
+	HAL_Delay(2000);
+	fsmc_sdram_test();
+	HAL_Delay(2000);
+
+	for(ts=0;ts<250000;ts++)
+	{
+		printf("testsram[%lu]:%d\r\n",ts,testsram[ts]);  //打印SDRAM数据
+	}
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -219,8 +188,8 @@ int main(void)
 		HAL_UART_Transmit_DMA(&huart1, (uint8_t*)receivData, strlen(receivData));
 		dataReady = 0;
 	}
-	Button_Update(&btn1);
-	Button_Update(&btn2);
+
+	Button_UPDATE();
 
 	//dosomething...
 
@@ -247,7 +216,7 @@ void SystemClock_Config(void)
 
   /** Configure the main internal regulator output voltage
   */
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
@@ -258,12 +227,12 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 5;
-  RCC_OscInitStruct.PLL.PLLN = 192;
+  RCC_OscInitStruct.PLL.PLLM = 2;
+  RCC_OscInitStruct.PLL.PLLN = 64;
   RCC_OscInitStruct.PLL.PLLP = 2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
-  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
+  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
   RCC_OscInitStruct.PLL.PLLFRACN = 0;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -284,191 +253,15 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
   RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief TIM2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM2_Init(void)
-{
-
-  /* USER CODE BEGIN TIM2_Init 0 */
-
-  /* USER CODE END TIM2_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM2_Init 1 */
-
-  /* USER CODE END TIM2_Init 1 */
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 24000-1;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 10000-1;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM2_Init 2 */
-
-  /* USER CODE END TIM2_Init 2 */
-
-}
-
-/**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart1.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_SetTxFifoThreshold(&huart1, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_SetRxFifoThreshold(&huart1, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_DisableFifoMode(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
-
-  /* USER CODE END USART1_Init 2 */
-
-}
-
-/**
-  * Enable DMA controller clock
-  */
-static void MX_DMA_Init(void)
-{
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  /* DMA1_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
-  /* DMA1_Stream1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
-
-}
-
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-  /* USER CODE BEGIN MX_GPIO_Init_1 */
-
-  /* USER CODE END MX_GPIO_Init_1 */
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-
-  /*Configure GPIO pin : btn3_Pin */
-  GPIO_InitStruct.Pin = btn3_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(btn3_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : btn2_Pin btn1_Pin */
-  GPIO_InitStruct.Pin = btn2_Pin|btn1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
-
-  /* USER CODE BEGIN MX_GPIO_Init_2 */
-
-  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
-
- /* MPU Configuration */
-
-void MPU_Config(void)
-{
-  MPU_Region_InitTypeDef MPU_InitStruct = {0};
-
-  /* Disables the MPU */
-  HAL_MPU_Disable();
-
-  /** Initializes and configures the Region and the memory to be protected
-  */
-  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
-  MPU_InitStruct.Number = MPU_REGION_NUMBER0;
-  MPU_InitStruct.BaseAddress = 0x0;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_4GB;
-  MPU_InitStruct.SubRegionDisable = 0x87;
-  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-  MPU_InitStruct.AccessPermission = MPU_REGION_NO_ACCESS;
-  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
-  MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
-  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
-  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
-
-  HAL_MPU_ConfigRegion(&MPU_InitStruct);
-  /* Enables the MPU */
-  HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
-
-}
 
 /**
   * @brief  This function is executed in case of error occurrence.
