@@ -1,24 +1,25 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
+#include "ltdc.h"
 #include "memorymap.h"
 #include "tim.h"
 #include "usart.h"
@@ -31,6 +32,7 @@
 #include"../inc/retarget.h"		//printf函数重映射
 #include "../../User/Key/Button_event.h"
 #include "../../User/W9825G6KH/W9825G6KH.h"
+#include "../../User/RGBLCD/LCD.h"
 
 /* USER CODE END Includes */
 
@@ -41,7 +43,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
 
 /* USER CODE END PD */
 
@@ -56,8 +57,6 @@
 
 uint16_t fps = 0, fps_max = 0;
 
-uint16_t testsram[250000] __attribute__((section(".sdram_section")));//sdram测试用数组
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,26 +64,25 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
 //SDRAM内存测试
-void fsmc_sdram_test()
-{
-	__IO uint32_t i=0;
-	__IO uint32_t temp=0;
-	__IO uint32_t sval=0;	//在地址0读到的数据
+void fsmc_sdram_test() {
+	__IO uint32_t i = 0;
+	__IO uint32_t temp = 0;
+	__IO uint32_t sval = 0;	//在地址0读到的数据
 
 	//每隔16K字节,写入一个数据,总共写入2048个数据,刚好是32M字节
-	for(i=0;i<32*1024*1024;i+=16*1024)
-	{
-		*(__IO uint32_t*)(SDRAM_BANK_ADDR+i)=temp;
+	for (i = 0; i < 32 * 1024 * 1024; i += 16 * 1024) {
+		*(__IO uint32_t*) (SDRAM_BANK_ADDR + i) = temp;
 		temp++;
 	}
 	//依次读出之前写入的数据,进行校验
- 	for(i=0;i<32*1024*1024;i+=16*1024)
-	{
-  		temp=*(__IO uint32_t*)(SDRAM_BANK_ADDR+i);
-		if(i==0)sval=temp;
- 		else if(temp<=sval)break;//后面读出的数据一定要比第一次读到的数据大.
-		printf("SDRAM Capacity:%dKB\r\n",(uint16_t)(temp-sval+1)*16);//打印SDRAM容量
- 	}
+	for (i = 0; i < 32 * 1024 * 1024; i += 16 * 1024) {
+		temp = *(__IO uint32_t*) (SDRAM_BANK_ADDR + i);
+		if (i == 0)
+			sval = temp;
+		else if (temp <= sval)
+			break;	//后面读出的数据一定要比第一次读到的数据大.
+		printf("SDRAM Capacity:%dKB\r\n", (uint16_t) (temp - sval + 1) * 16);//打印SDRAM容量
+	}
 }
 
 /* USER CODE END PFP */
@@ -93,10 +91,9 @@ void fsmc_sdram_test()
 /* USER CODE BEGIN 0 */
 
 //重定义'定时器周期回调'函数
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){	//1S周期回调
-	if(htim == &htim2){
-		if(fps_max - fps < -1 || fps_max - fps > 1)
-		{
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {	//1S周期回调
+	if (htim == &htim2) {
+		if (fps_max - fps < -1 || fps_max - fps > 1) {
 			fps_max = fps;
 		}
 
@@ -105,158 +102,254 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){	//1S周期回调
 	}
 }
 
-
-
-char receivData[50] = {0};//存放接收内容(记得初始化)
-uint8_t dataReady;//发送标志位
+char receivData[50] = { 0 };	//存放接收内容(记得初始化)
+uint8_t dataReady;	//发送标志位
 //重定义'串口事件回调'函数
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
-	if(huart == &huart1){
-		dataReady = 1;//在主函数里处理发送
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+	if (huart == &huart1) {
+		dataReady = 1;	//在主函数里处理发送
 
 		//处理数据...
 
-		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t*)receivData, 50);
-		__HAL_DMA_DISABLE_IT(&hdma_usart1_rx,DMA_IT_HT);//关闭DMA接收过半中断
+		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t*) receivData, 50);
+		__HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);	//关闭DMA接收过半中断
 	}
 }
+
+LTDC_LayerCfgTypeDef pLayerCfg = { 0 };
+LTDC_LayerCfgTypeDef pLayerCfg1 = { 0 };
 
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void) {
 
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
+	/* MAX初始配置 */
+	pLayerCfg.WindowX0 = 0;
+	pLayerCfg.WindowX1 = 800;
+	pLayerCfg.WindowY0 = 0;
+	pLayerCfg.WindowY1 = 480;
+	pLayerCfg.PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
+	pLayerCfg.Alpha = 255;
+	pLayerCfg.Alpha0 = 0;
+	pLayerCfg.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
+	pLayerCfg.BlendingFactor2 = LTDC_BLENDING_FACTOR2_CA;
+	pLayerCfg.FBStartAdress = (uint32_t) LCD_Buffer0;
+	pLayerCfg.ImageWidth = 800;
+	pLayerCfg.ImageHeight = 480;
+	pLayerCfg.Backcolor.Blue = 0;
+	pLayerCfg.Backcolor.Green = 0;
+	pLayerCfg.Backcolor.Red = 0;
 
-  /* USER CODE END 1 */
+	pLayerCfg1.WindowX0 = 0;
+	pLayerCfg1.WindowX1 = 800;
+	pLayerCfg1.WindowY0 = 0;
+	pLayerCfg1.WindowY1 = 480;
+	pLayerCfg1.PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
+	pLayerCfg1.Alpha = 255;
+	pLayerCfg1.Alpha0 = 0;
+	pLayerCfg1.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
+	pLayerCfg1.BlendingFactor2 = LTDC_BLENDING_FACTOR2_CA;
+	pLayerCfg1.FBStartAdress = (uint32_t) LCD_Buffer1;
+	pLayerCfg1.ImageWidth = 800;
+	pLayerCfg1.ImageHeight = 480;
+	pLayerCfg1.Backcolor.Blue = 0;
+	pLayerCfg1.Backcolor.Green = 0;
+	pLayerCfg1.Backcolor.Red = 0;
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* USER CODE END 1 */
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* USER CODE BEGIN Init */
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE END Init */
+	/* USER CODE BEGIN Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* USER CODE END Init */
 
-  /* USER CODE BEGIN SysInit */
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE END SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_TIM2_Init();
-  MX_USART1_UART_Init();
-  MX_FMC_Init();
-  /* USER CODE BEGIN 2 */
-  RetargetInit(&huart1);//将printf()函数映射到UART1串口上
-  Button_Init();//初始化按键
-  HAL_TIM_Base_Start_IT(&htim2);//开启定时
+	/* USER CODE END SysInit */
 
-  SDRAM_InitSequence();//W9825G6KH初始化
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_DMA_Init();
+	MX_TIM2_Init();
+	MX_USART1_UART_Init();
+	MX_FMC_Init();
+	MX_LTDC_Init();
+	/* USER CODE BEGIN 2 */
 
-	uint32_t ts=0;
-	for(ts=0;ts<250000;ts++)
-	{
-		testsram[ts]=ts;//预存测试数据
+	RetargetInit(&huart1);	//将printf()函数映射到UART1串口上
+	Button_Init();	//初始化按键
+	HAL_TIM_Base_Start_IT(&htim2);	//开启定时
+
+	SDRAM_InitSequence();	//W9825G6KH初始化
+
+//SDRAM测试
+//	uint32_t ts=0;
+//	for(ts=0;ts<250000;ts++)
+//	{
+//		testsram[ts]=ts;//预存测试数据
+//	}
+//	HAL_Delay(2000);
+//	fsmc_sdram_test();
+//	HAL_Delay(2000);
+//
+//	for(ts=0;ts<250000;ts++)
+//	{
+//		printf("testsram[%lu]:%d\r\n",ts,testsram[ts]);  //打印SDRAM数据
+//	}
+
+	/* USER CODE END 2 */
+
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
+	while (1) {
+		if (dataReady) {
+			// 处理activeBuffer中的数据
+			HAL_UART_Transmit_DMA(&huart1, (uint8_t*) receivData,
+					strlen(receivData));
+			dataReady = 0;
+		}
+
+		Button_UPDATE();
+
+		/* 此部分程序测试显示 */
+		memset(LCD_Buffer0, 0x66, sizeof(LCD_Buffer0));	//绿
+		memset(LCD_Buffer1, 0x66, sizeof(LCD_Buffer1));	//绿
+		HAL_Delay(1500);
+		memset(LCD_Buffer0, 0x11, sizeof(LCD_Buffer0));	//蓝
+		memset(LCD_Buffer1, 0x11, sizeof(LCD_Buffer1));	//绿
+		HAL_Delay(1500);
+		memset(LCD_Buffer0, 0xAA, sizeof(LCD_Buffer0));	//粉红
+		memset(LCD_Buffer1, 0xAA, sizeof(LCD_Buffer1));	//粉红
+		HAL_Delay(1500);
+
+		memset(LCD_Buffer0, 0x00, sizeof(LCD_Buffer0));	//黑
+		memset(LCD_Buffer1, 0x00, sizeof(LCD_Buffer1));	//黑
+		HAL_Delay(500);
+
+		/* 此部分程序测试混合机制 */
+
+		/*
+		 * 从layer0开始混合公式为
+		 * <结果0 = 混合因子1 * 当前层颜色(layer0) +混合因子2 * 底层(背景层)>
+		 * 然后把layer1加入混合
+		 * <最终结果 = 混合因子1 * 当前层颜色(layer1) +混合因子2 * 底层(结果0)>
+		 *
+		 * 每个混合因子可单独设置Alpha来源去计算混合权重
+		 * 当2个都设置为Alpha constant时权重值都为(Alpha constant for blending)/255，不会检查和是否为1
+		 *
+		 * 当Factor1设置为Pixel Alpha时，权重为(Alpha constant for blending)*(Pixel Alpha/255)
+		 * 此时Factor2有两种情况：
+		 * 1.Factor2为Pixel Alpha，那么Factor2权重为1-(Factor1权重)
+		 * 2.Factor2为Alpha constant，那么Factor2权重仍为(Alpha constant for blending)/255，不会检查和是否为1
+		 *
+		 *
+		 * */
+		if (HAL_LTDC_Init(&hltdc) != HAL_OK) {
+			Error_Handler();
+		}
+		//LTDC_BLENDING_FACTOR1_CA(固定)	或者		LTDC_BLENDING_FACTOR1_PAxCA(像素)
+		pLayerCfg.Alpha = 255;
+		pLayerCfg.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
+		pLayerCfg.BlendingFactor2 = LTDC_BLENDING_FACTOR1_PAxCA;
+
+		if (HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg, 0) != HAL_OK) {
+			Error_Handler();
+		}
+		pLayerCfg1.Alpha = 128;
+		pLayerCfg1.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
+		pLayerCfg1.BlendingFactor2 = LTDC_BLENDING_FACTOR2_CA;
+
+		if (HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg1, 1) != HAL_OK) {
+			Error_Handler();
+		}
+
+		memset(LCD_Buffer0, 0x66, sizeof(LCD_Buffer0));	//绿
+		memset(LCD_Buffer1, 0x66, sizeof(LCD_Buffer1));	//绿
+		HAL_Delay(1500);
+		memset(LCD_Buffer0, 0x11, sizeof(LCD_Buffer0));	//蓝
+		memset(LCD_Buffer1, 0x11, sizeof(LCD_Buffer1));	//蓝
+		HAL_Delay(1500);
+		memset(LCD_Buffer0, 0xAA, sizeof(LCD_Buffer0));	//粉红
+		memset(LCD_Buffer1, 0xAA, sizeof(LCD_Buffer1));	//粉红
+		HAL_Delay(1500);
+
+		memset(LCD_Buffer0, 0x00, sizeof(LCD_Buffer0));	//黑
+		memset(LCD_Buffer1, 0x00, sizeof(LCD_Buffer1));	//黑
+		HAL_Delay(500);
+
+		/* USER CODE END WHILE */
+
+		/* USER CODE BEGIN 3 */
 	}
-	HAL_Delay(2000);
-	fsmc_sdram_test();
-	HAL_Delay(2000);
-
-	for(ts=0;ts<250000;ts++)
-	{
-		printf("testsram[%lu]:%d\r\n",ts,testsram[ts]);  //打印SDRAM数据
-	}
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-	if (dataReady) {
-		// 处理activeBuffer中的数据
-		HAL_UART_Transmit_DMA(&huart1, (uint8_t*)receivData, strlen(receivData));
-		dataReady = 0;
-	}
-
-	Button_UPDATE();
-
-	//dosomething...
-
-
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+	/* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void) {
+	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
 
-  /** Supply configuration update enable
-  */
-  HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
+	/** Supply configuration update enable
+	 */
+	HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
 
-  /** Configure the main internal regulator output voltage
-  */
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+	/** Configure the main internal regulator output voltage
+	 */
+	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
 
-  while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
+	while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {
+	}
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 2;
-  RCC_OscInitStruct.PLL.PLLN = 64;
-  RCC_OscInitStruct.PLL.PLLP = 2;
-  RCC_OscInitStruct.PLL.PLLQ = 2;
-  RCC_OscInitStruct.PLL.PLLR = 2;
-  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
-  RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
-  RCC_OscInitStruct.PLL.PLLFRACN = 0;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	/** Initializes the RCC Oscillators according to the specified parameters
+	 * in the RCC_OscInitTypeDef structure.
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+	RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+	RCC_OscInitStruct.PLL.PLLM = 5;
+	RCC_OscInitStruct.PLL.PLLN = 192;
+	RCC_OscInitStruct.PLL.PLLP = 2;
+	RCC_OscInitStruct.PLL.PLLQ = 4;
+	RCC_OscInitStruct.PLL.PLLR = 2;
+	RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
+	RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
+	RCC_OscInitStruct.PLL.PLLFRACN = 0;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+		Error_Handler();
+	}
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
-                              |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
-  RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
+	/** Initializes the CPU, AHB and APB buses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
+			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 | RCC_CLOCKTYPE_D3PCLK1
+			| RCC_CLOCKTYPE_D1PCLK1;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
+	RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
+	RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK) {
+		Error_Handler();
+	}
 }
 
 /* USER CODE BEGIN 4 */
@@ -264,18 +357,16 @@ void SystemClock_Config(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
-  /* USER CODE END Error_Handler_Debug */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
+void Error_Handler(void) {
+	/* USER CODE BEGIN Error_Handler_Debug */
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1) {
+	}
+	/* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT

@@ -178,6 +178,8 @@ SECTIONS
 }
 
 
+/* ↓ 用户定义区 ↓ */
+
 MEMORY {
   SDRAM (xrw) : ORIGIN = 0xC0000000, LENGTH = 32M  /* 定义SDRAM区域 */
 }
@@ -188,4 +190,4 @@ SECTIONS {
   } > SDRAM
 }
 
-
+/* ↑ 用户定义区 ↑ */
