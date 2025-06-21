@@ -224,6 +224,20 @@ int main(void) {
 		Button_UPDATE();
 
 		/* 此部分程序测试显示 */
+		if (HAL_LTDC_Init(&hltdc) != HAL_OK) {
+			Error_Handler();
+		}
+		//LTDC_BLENDING_FACTOR1_CA(固定)	或者		LTDC_BLENDING_FACTOR1_PAxCA(像素)
+		pLayerCfg.Alpha = 255;
+
+		if (HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg, 0) != HAL_OK) {
+			Error_Handler();
+		}
+		pLayerCfg1.Alpha = 255;
+
+		if (HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg1, 1) != HAL_OK) {
+			Error_Handler();
+		}
 		memset(LCD_Buffer0, 0x66, sizeof(LCD_Buffer0));	//绿
 		memset(LCD_Buffer1, 0x66, sizeof(LCD_Buffer1));	//绿
 		HAL_Delay(1500);
@@ -246,43 +260,50 @@ int main(void) {
 		 * 然后把layer1加入混合
 		 * <最终结果 = 混合因子1 * 当前层颜色(layer1) +混合因子2 * 底层(结果0)>
 		 *
-		 * 每个混合因子可单独设置Alpha来源去计算混合权重
-		 * 当2个都设置为Alpha constant时权重值都为(Alpha constant for blending)/255，不会检查和是否为1
+		 * 通用公式:通用混合公式为：BC = BF1 x C + BF2 x Cs
+		 * BC = 混合后的颜色
+		 * BF1 = 混合系数 1
+		 * C = 当前层颜色
+		 * BF2 = 混合系数 2
+		 * Cs = 底层混合后的颜色
 		 *
-		 * 当Factor1设置为Pixel Alpha时，权重为(Alpha constant for blending)*(Pixel Alpha/255)
-		 * 此时Factor2有两种情况：
-		 * 1.Factor2为Pixel Alpha，那么Factor2权重为1-(Factor1权重)
-		 * 2.Factor2为Alpha constant，那么Factor2权重仍为(Alpha constant for blending)/255，不会检查和是否为1
+		 * 混合因子1 两种配置:
+		 * 100: 常数Alpha
+		 * 110: 像素Alpha x 常数 Alpha
 		 *
+		 * 混合因子2 两种配置:
+		 * 101: 1 - 常数Alpha
+		 * 111: 1 - 像素Alpha x 常数Alpha
+		 *
+		 * 像素Alpha和常数Alpha均是C层的属性
 		 *
 		 * */
 		if (HAL_LTDC_Init(&hltdc) != HAL_OK) {
 			Error_Handler();
 		}
-		//LTDC_BLENDING_FACTOR1_CA(固定)	或者		LTDC_BLENDING_FACTOR1_PAxCA(像素)
-		pLayerCfg.Alpha = 255;
-		pLayerCfg.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
-		pLayerCfg.BlendingFactor2 = LTDC_BLENDING_FACTOR1_PAxCA;
+		pLayerCfg.Alpha = 255;	//不让背景参与混合
 
 		if (HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg, 0) != HAL_OK) {
 			Error_Handler();
 		}
-		pLayerCfg1.Alpha = 128;
-		pLayerCfg1.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
-		pLayerCfg1.BlendingFactor2 = LTDC_BLENDING_FACTOR2_CA;
+		pLayerCfg1.Alpha = 128;	//两层以0.5权重混合
 
 		if (HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg1, 1) != HAL_OK) {
 			Error_Handler();
 		}
 
 		memset(LCD_Buffer0, 0x66, sizeof(LCD_Buffer0));	//绿
-		memset(LCD_Buffer1, 0x66, sizeof(LCD_Buffer1));	//绿
-		HAL_Delay(1500);
-		memset(LCD_Buffer0, 0x11, sizeof(LCD_Buffer0));	//蓝
-		memset(LCD_Buffer1, 0x11, sizeof(LCD_Buffer1));	//蓝
-		HAL_Delay(1500);
 		memset(LCD_Buffer0, 0xAA, sizeof(LCD_Buffer0));	//粉红
+		/*混合=黄*/
+		HAL_Delay(1500);
+		memset(LCD_Buffer0, 0x66, sizeof(LCD_Buffer0));	//绿
+		memset(LCD_Buffer0, 0x11, sizeof(LCD_Buffer0));	//蓝
+		/*混合=青*/
+		HAL_Delay(1500);
+
+		memset(LCD_Buffer0, 0x11, sizeof(LCD_Buffer0));	//蓝
 		memset(LCD_Buffer1, 0xAA, sizeof(LCD_Buffer1));	//粉红
+		/*混合=紫*/
 		HAL_Delay(1500);
 
 		memset(LCD_Buffer0, 0x00, sizeof(LCD_Buffer0));	//黑
