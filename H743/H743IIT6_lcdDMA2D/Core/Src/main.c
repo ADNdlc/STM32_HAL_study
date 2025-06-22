@@ -171,9 +171,32 @@ int main(void)
 	uint32_t 黄色=0xffc0;  // 定义黄色
 	uint32_t 蓝色=0x1155;  // 定义蓝色
 
+	/* 条形图 */
+	// 填充背景色
+	FillRect(0,   0,   320, 240,  0xFFFF,(uint32_t) LCD_Buffer1);
+	// 绘制数据条
+	FillRect(80,  80,  20,  120,  0x001f,(uint32_t) LCD_Buffer1);
+	FillRect(120, 100, 20,  100,  0x001f,(uint32_t) LCD_Buffer1);
+	FillRect(160, 40,  20,  160,  0x001f,(uint32_t) LCD_Buffer1);
+	FillRect(200, 60,  20,  140,  0x001f,(uint32_t) LCD_Buffer1);
+	// 绘制X轴
+	FillRect(40,  200, 240, 1,    0x0000,(uint32_t) LCD_Buffer1);
+	HAL_Delay(3000);
+
 	memset(LCD_Buffer0, 0x00, sizeof(LCD_Buffer0));	//黑
 	memset(LCD_Buffer1, 0x00, sizeof(LCD_Buffer1));	//黑
-	int temp=0;
+
+	/* 方块混合图 */
+	FillRect(50,50,100,100,RED,(uint32_t) LCD_Buffer0);
+	FillRect(100,100,100,100,WHITE,(uint32_t) LCD_Buffer1);
+
+	FillRect(200,200,100,100,黄色,(uint32_t) LCD_Buffer0);
+	FillRect(250,250,100,100,蓝色,(uint32_t) LCD_Buffer1);
+
+	HAL_Delay(3000);
+	FillRect(0,0,800,480,0x0000,(uint32_t) LCD_Buffer0);
+	FillRect(0,0,800,480,0x0000,(uint32_t) LCD_Buffer1);
+	int temp = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -188,34 +211,28 @@ int main(void)
 
 		Button_UPDATE();
 
+		/* 方块移动图 */
+		for(int i=0;i<800;i+=10){
 
-		memset(LCD_Buffer0, 0x00, sizeof(LCD_Buffer0));	//黑
-		memset(LCD_Buffer1, 0x00, sizeof(LCD_Buffer1));	//黑
-		temp++;
-
-		for(int j=0;j<100;j++){
-
-			for(int i=0;i<100;i++){
-				LTDC_Draw_Point((i+(temp*8)),(j+100),RED,(uint32_t) LCD_Buffer0);
+			FillRect((50+i)%800,50,100,100,RED,(uint32_t) LCD_Buffer0);
+			FillRect((200+i)%800,200,100,100,黄色,(uint32_t) LCD_Buffer0);
+			temp=(100-i)%800;
+			if(temp<0){
+				temp=800+temp;//超出范围回到最右边(最大处)
 			}
-		    for(int i=0;i<100;i++){
-		        // 计算反向x坐标，使用(300 - temp*20)作为起始点，再减去i
-		        LTDC_Draw_Point((700 - (temp*5) - i),(j+125),WHITE,(uint32_t) LCD_Buffer1);
-		    }
-
-		    for(int i=0;i<100;i++){
-		        // 计算反向x坐标，使用(300 - temp*20)作为起始点，再减去i
-		        LTDC_Draw_Point((500 - (temp*10) - i),(j+300),黄色,(uint32_t) LCD_Buffer0);
-		    }
-
-			for(int i=0;i<100;i++){
-				LTDC_Draw_Point((i+(temp*5)),(j+325),蓝色,(uint32_t) LCD_Buffer1);
+			FillRect(temp,100,100,100,WHITE,(uint32_t) LCD_Buffer1);
+			temp=(250-i)%800;
+			if(temp<0){
+				temp=800+temp;////超出范围回到最右边(最大处)
 			}
+			FillRect(temp,250,100,100,蓝色,(uint32_t) LCD_Buffer1);
 
+			HAL_Delay(10);
+
+			FillRect(0,0,800,480,0x0000,(uint32_t) LCD_Buffer0);
+			FillRect(0,0,800,480,0x0000,(uint32_t) LCD_Buffer1);
 		}
 
-
-		temp %= 800;
 
     /* USER CODE END WHILE */
 
