@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
+#include "dma2d.h"
 #include "ltdc.h"
 #include "memorymap.h"
 #include "tim.h"
@@ -154,6 +155,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_FMC_Init();
   MX_LTDC_Init();
+  MX_DMA2D_Init();
   /* USER CODE BEGIN 2 */
 
 	RetargetInit(&huart1);	//将printf()函数映射到UART1串口上
@@ -194,20 +196,20 @@ int main(void)
 		for(int j=0;j<100;j++){
 
 			for(int i=0;i<100;i++){
-				LTDC_Draw_Point1((i+(temp*8)),(j+25),RED);
+				LTDC_Draw_Point((i+(temp*8)),(j+100),RED,(uint32_t) LCD_Buffer0);
 			}
 		    for(int i=0;i<100;i++){
 		        // 计算反向x坐标，使用(300 - temp*20)作为起始点，再减去i
-		        LTDC_Draw_Point1((700 - (temp*5) - i),(j+75),WHITE);
+		        LTDC_Draw_Point((700 - (temp*5) - i),(j+125),WHITE,(uint32_t) LCD_Buffer1);
 		    }
 
 		    for(int i=0;i<100;i++){
 		        // 计算反向x坐标，使用(300 - temp*20)作为起始点，再减去i
-		        LTDC_Draw_Point1((500 - (temp*10) - i),(j+300),黄色);
+		        LTDC_Draw_Point((500 - (temp*10) - i),(j+300),黄色,(uint32_t) LCD_Buffer0);
 		    }
 
 			for(int i=0;i<100;i++){
-				LTDC_Draw_Point1((i+(temp*5)),(j+325),蓝色);
+				LTDC_Draw_Point((i+(temp*5)),(j+325),蓝色,(uint32_t) LCD_Buffer1);
 			}
 
 		}
