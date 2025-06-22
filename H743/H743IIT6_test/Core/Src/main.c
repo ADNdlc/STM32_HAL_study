@@ -242,7 +242,7 @@ int main(void) {
 		memset(LCD_Buffer1, 0x66, sizeof(LCD_Buffer1));	//绿
 		HAL_Delay(1500);
 		memset(LCD_Buffer0, 0x11, sizeof(LCD_Buffer0));	//蓝
-		memset(LCD_Buffer1, 0x11, sizeof(LCD_Buffer1));	//绿
+		memset(LCD_Buffer1, 0x11, sizeof(LCD_Buffer1));	//蓝
 		HAL_Delay(1500);
 		memset(LCD_Buffer0, 0xAA, sizeof(LCD_Buffer0));	//粉红
 		memset(LCD_Buffer1, 0xAA, sizeof(LCD_Buffer1));	//粉红
@@ -250,7 +250,7 @@ int main(void) {
 
 		memset(LCD_Buffer0, 0x00, sizeof(LCD_Buffer0));	//黑
 		memset(LCD_Buffer1, 0x00, sizeof(LCD_Buffer1));	//黑
-		HAL_Delay(500);
+		HAL_Delay(2500);
 
 		/* 此部分程序测试混合机制 */
 
@@ -286,7 +286,7 @@ int main(void) {
 		if (HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg, 0) != HAL_OK) {
 			Error_Handler();
 		}
-		pLayerCfg1.Alpha = 128;	//两层以0.5权重混合
+		pLayerCfg1.Alpha = 100;	//Layer0/1两层以0.39权重混合
 
 		if (HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg1, 1) != HAL_OK) {
 			Error_Handler();
@@ -294,11 +294,10 @@ int main(void) {
 
 		memset(LCD_Buffer0, 0x66, sizeof(LCD_Buffer0));	//绿
 		memset(LCD_Buffer0, 0xAA, sizeof(LCD_Buffer0));	//粉红
-		/*混合=黄*/
 		HAL_Delay(1500);
-		memset(LCD_Buffer0, 0x66, sizeof(LCD_Buffer0));	//绿
+
 		memset(LCD_Buffer0, 0x11, sizeof(LCD_Buffer0));	//蓝
-		/*混合=青*/
+		memset(LCD_Buffer0, 0x66, sizeof(LCD_Buffer0));	//绿
 		HAL_Delay(1500);
 
 		memset(LCD_Buffer0, 0x11, sizeof(LCD_Buffer0));	//蓝
@@ -308,7 +307,7 @@ int main(void) {
 
 		memset(LCD_Buffer0, 0x00, sizeof(LCD_Buffer0));	//黑
 		memset(LCD_Buffer1, 0x00, sizeof(LCD_Buffer1));	//黑
-		HAL_Delay(500);
+		HAL_Delay(2500);
 
 		/* USER CODE END WHILE */
 
