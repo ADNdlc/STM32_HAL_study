@@ -34,7 +34,7 @@
 #include "../../User/Key/Button_event.h"
 #include "../../User/W9825G6KH/W9825G6KH.h"
 #include "../../User/RGBLCD/LCD.h"
-
+#include "../../User/RGBLCD/IMG.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -171,31 +171,63 @@ int main(void)
 	uint32_t 黄色=0xffc0;  // 定义黄色
 	uint32_t 蓝色=0x1155;  // 定义蓝色
 
-	/* 条形图 */
-	// 填充背景色
-	FillRect(0,   0,   320, 240,  0xFFFF,(uint32_t) LCD_Buffer1);
-	// 绘制数据条
-	FillRect(80,  80,  20,  120,  0x001f,(uint32_t) LCD_Buffer1);
-	FillRect(120, 100, 20,  100,  0x001f,(uint32_t) LCD_Buffer1);
-	FillRect(160, 40,  20,  160,  0x001f,(uint32_t) LCD_Buffer1);
-	FillRect(200, 60,  20,  140,  0x001f,(uint32_t) LCD_Buffer1);
-	// 绘制X轴
-	FillRect(40,  200, 240, 1,    0x0000,(uint32_t) LCD_Buffer1);
-	HAL_Delay(3000);
+	/* 防止SDRAM有残留数据 */
+	FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer0);
+	FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer1);
 
-	memset(LCD_Buffer0, 0x00, sizeof(LCD_Buffer0));	//黑
-	memset(LCD_Buffer1, 0x00, sizeof(LCD_Buffer1));	//黑
+	// 填充背景色
+	FillRect_horizontal(0,   0,   320, 240,  0xFFFF,(uint32_t) LCD_Buffer1);
+	// 绘制数据条
+	FillRect_horizontal(80,  80,  20,  120,  0x001f,(uint32_t) LCD_Buffer1);
+	FillRect_horizontal(120, 100, 20,  100,  0x001f,(uint32_t) LCD_Buffer1);
+	FillRect_horizontal(160, 40,  20,  160,  0x001f,(uint32_t) LCD_Buffer1);
+	FillRect_horizontal(200, 60,  20,  140,  0x001f,(uint32_t) LCD_Buffer1);
+	// 绘制X轴
+	FillRect_horizontal(40,  200, 240, 1,    0x0000,(uint32_t) LCD_Buffer1);
+	HAL_Delay(1000);
+
+	FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer0);
+	FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer1);
+
+	// 填充背景色
+	FillRect_vertical(0,   0,   320, 240,  0xFFFF,(uint32_t) LCD_Buffer1);
+	// 绘制数据条(竖屏)
+	FillRect_vertical(80,  80,  20,  120,  0x001f,(uint32_t) LCD_Buffer1);
+	FillRect_vertical(120, 100, 20,  100,  0x001f,(uint32_t) LCD_Buffer1);
+	FillRect_vertical(160, 40,  20,  160,  0x001f,(uint32_t) LCD_Buffer1);
+	FillRect_vertical(200, 60,  20,  140,  0x001f,(uint32_t) LCD_Buffer1);
+	// 绘制X轴
+	FillRect_vertical(40,  200, 240, 1,    0x0000,(uint32_t) LCD_Buffer1);
+	HAL_Delay(1000);
+	FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer0);
+	FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer1);
+
+	/* 图片 */
+	LTDC_Color_Fill(0,0,368,128,(uint16_t*)gImage_IMG,(uint32_t) LCD_Buffer1);
+
+	HAL_Delay(1500);
+	FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer0);
+	FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer1);
 
 	/* 方块混合图 */
-	FillRect(50,50,100,100,RED,(uint32_t) LCD_Buffer0);
-	FillRect(100,100,100,100,WHITE,(uint32_t) LCD_Buffer1);
+	//横屏
+	FillRect_horizontal(50,50,100,100,RED,(uint32_t) LCD_Buffer0);
+	FillRect_horizontal(100,100,100,100,WHITE,(uint32_t) LCD_Buffer1);
 
-	FillRect(200,200,100,100,黄色,(uint32_t) LCD_Buffer0);
-	FillRect(250,250,100,100,蓝色,(uint32_t) LCD_Buffer1);
+	FillRect_horizontal(200,200,100,100,黄色,(uint32_t) LCD_Buffer0);
+	FillRect_horizontal(250,250,100,100,蓝色,(uint32_t) LCD_Buffer1);
 
-	HAL_Delay(3000);
-	FillRect(0,0,800,480,0x0000,(uint32_t) LCD_Buffer0);
-	FillRect(0,0,800,480,0x0000,(uint32_t) LCD_Buffer1);
+	//竖屏
+	FillRect_vertical(0,0,100,100,WHITE,(uint32_t) LCD_Buffer1);
+	FillRect_vertical(50,50,100,100,RED,(uint32_t) LCD_Buffer0);
+	FillRect_vertical(0,800-100,100,100,黄色,(uint32_t) LCD_Buffer0);
+	FillRect_vertical(50,800-150,100,100,蓝色,(uint32_t) LCD_Buffer1);
+
+	HAL_Delay(1500);
+	FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer0);
+	FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer1);
+
+
 	int temp = 0;
   /* USER CODE END 2 */
 
@@ -211,26 +243,44 @@ int main(void)
 
 		Button_UPDATE();
 
-		/* 方块移动图 */
-		for(int i=0;i<800;i+=10){
 
-			FillRect((50+i)%800,50,100,100,RED,(uint32_t) LCD_Buffer0);
-			FillRect((200+i)%800,200,100,100,黄色,(uint32_t) LCD_Buffer0);
+		for(int i=0;i<3840;i+=10){
+
+			/* 横向移动 */
+			FillRect_horizontal((50+i)%800,50,100,100,RED,(uint32_t) LCD_Buffer0);
+			FillRect_horizontal((200+i)%800,200,100,100,黄色,(uint32_t) LCD_Buffer0);
 			temp=(100-i)%800;
 			if(temp<0){
 				temp=800+temp;//超出范围回到最右边(最大处)
 			}
-			FillRect(temp,100,100,100,WHITE,(uint32_t) LCD_Buffer1);
+			FillRect_horizontal(temp,100,100,100,WHITE,(uint32_t) LCD_Buffer1);
 			temp=(250-i)%800;
 			if(temp<0){
 				temp=800+temp;////超出范围回到最右边(最大处)
 			}
-			FillRect(temp,250,100,100,蓝色,(uint32_t) LCD_Buffer1);
+			FillRect_horizontal(temp,250,100,100,蓝色,(uint32_t) LCD_Buffer1);
 
-			HAL_Delay(10);
 
-			FillRect(0,0,800,480,0x0000,(uint32_t) LCD_Buffer0);
-			FillRect(0,0,800,480,0x0000,(uint32_t) LCD_Buffer1);
+
+			/* 竖向移动 */
+			FillRect_vertical((0+i)%480,0,100,100,WHITE,(uint32_t) LCD_Buffer1);
+			FillRect_vertical((50+i)%480,(800-150),100,100,蓝色,(uint32_t) LCD_Buffer1);
+
+			temp=(50-i)%480;
+			if(temp<0){
+				temp=480+temp;////超出范围回到最右边(最大处)
+			}
+			FillRect_vertical(temp,50,100,100,RED,(uint32_t) LCD_Buffer0);
+			temp=(0-i)%480;
+			if(temp<0){
+				temp=480+temp;////超出范围回到最右边(最大处)
+			}
+			FillRect_vertical(temp,(800-100),100,100,黄色,(uint32_t) LCD_Buffer0);
+
+			HAL_Delay(30);
+
+			FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer0);
+			FillRect_horizontal(0,0,800,480,0x0000,(uint32_t) LCD_Buffer1);
 		}
 
 

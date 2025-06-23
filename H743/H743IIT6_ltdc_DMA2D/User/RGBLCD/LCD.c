@@ -12,13 +12,39 @@ uint16_t LCD_Buffer0[800][480] __attribute__((section(".sdram_section"), aligned
 uint16_t LCD_Buffer1[800][480] __attribute__((section(".sdram_section"), aligned(16)));
 
 
-void LTDC_Draw_Point(uint16_t x,uint16_t y,uint32_t color,uint32_t addr)
+/* 画点函数[800]x[480]屏幕
+ * 任意一个点在内存里的的位置 = 行大小*a距离 + 列距离
+ *
+ * 横屏情况(屏幕x坐标 对应 数组行, 屏幕y坐标 对应 数组列): 起始地址 + 像素大小*(行大小*y + x)
+ *
+ * 竖屏情况(屏幕x坐标 对应 数组列, 屏幕y坐标 对应 数组行): 起始地址 + 像素大小*(行大小* x 		 + y)
+ * 															  *(行大小*(列大小-1-x) + y)
+ *    这里用画面逆时针转90°情况: 此时第一个像素在数组[0][479]也就是屏幕横着看的左下角,所以x的计算是数组最大列-坐标
+ */
+void LTDC_Draw_Point_horizontal(uint16_t x,uint16_t y,uint32_t color,uint32_t Layeraddr)
 {
-	*(uint16_t*)((uint32_t)addr+2*(800*y+x))=color;
-	// 上方代码中：2为每个像素颜色值的大小，意为2字节，如果颜色格式大于RGB565，则为4字节，480为本文中使用的屏幕宽度像素值，
+	*(uint16_t*)((uint32_t)Layeraddr + 2*(800*y + x)) = color;
+}
+void LTDC_Draw_Point_vertical(uint16_t x,uint16_t y,uint32_t color,uint32_t Layeraddr)
+{
+	*(uint16_t*)((uint32_t)Layeraddr + 2*(800*(479-x) + y)) = color;
 }
 
+/*	读点函数
+ *
+ */
+void LTDC_Read_Point_horizontal(uint16_t x,uint16_t y,uint32_t Layeraddr)
+{
+	return *(uint16_t*)((uint32_t)Layeraddr + 2*(800*y + x));
+}
+void LTDC_Read_Point_vertical(uint16_t x,uint16_t y,uint32_t Layeraddr)
+{
+	return *(uint16_t*)((uint32_t)Layeraddr + 2*(800*(479-x) + y));
+}
 
+/*	DMA2D操作函数
+ *
+ */
 static inline void DMA2D_Fill( void * pDst, uint32_t width, uint32_t height, uint32_t lineOff, uint32_t pixelFormat,  uint32_t color)
 {
     /* DMA2D配置 */
@@ -36,9 +62,19 @@ static inline void DMA2D_Fill( void * pDst, uint32_t width, uint32_t height, uin
     while (DMA2D->CR & DMA2D_CR_START) {}
 }
 
-void FillRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color,uint32_t Buffer){
-    void* pDist = &(((uint16_t*)Buffer)[y*800 + x]);
+/*	DMA2D填充函数_横屏
+ *
+ */
+void FillRect_horizontal(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color,uint32_t Layeraddr){
+    void* pDist = &(((uint16_t*)Layeraddr)[y*800 + x]);//起始点
     DMA2D_Fill(pDist, w, h, 800 - w, LTDC_PIXEL_FORMAT_RGB565, color);
+}
+/*	DMA2D填充函数_竖屏
+ *
+ */
+void FillRect_vertical(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color,uint32_t Layeraddr){
+    void* pDist = &(((uint16_t*)Layeraddr)[(479-(x+w))*800 + y]);//起始点
+    DMA2D_Fill(pDist, h, w, 800 - h, LTDC_PIXEL_FORMAT_RGB565, color);
 }
 
 
