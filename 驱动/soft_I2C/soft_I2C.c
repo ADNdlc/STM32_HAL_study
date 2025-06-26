@@ -260,9 +260,9 @@ static uint8_t I2C_Soft_ReadByte(I2C_Soft_HandleTypeDef *hi2c, uint8_t ack) {
 /* ================================================以下是应用函数======================================================== */
 
 // 初始化I2C接口
-HAL_StatusTypeDef I2C_Soft_Init(I2C_Soft_HandleTypeDef *hi2c, uint32_t sys_clk_freq) {
+HAL_StatusTypeDef I2C_Soft_Init(I2C_Soft_HandleTypeDef *hi2c) {
     // 参数检查
-    if (hi2c == NULL || sys_clk_freq == 0) {
+    if (hi2c == NULL) {
         return HAL_ERROR;
     }
 
@@ -294,7 +294,8 @@ HAL_StatusTypeDef I2C_Soft_Init(I2C_Soft_HandleTypeDef *hi2c, uint32_t sys_clk_f
         return HAL_BUSY;
     }
 
-    // 计算延时乘数 (基于系统时钟频率)
+    // 自动获取系统时钟频率并计算延时乘数
+    uint32_t sys_clk_freq = HAL_RCC_GetSysClockFreq();
     hi2c->delay_multiplier = sys_clk_freq / 1000000.0f; // 每微秒的周期数
 
     if (hi2c->timing.tSCL_low == 0) {

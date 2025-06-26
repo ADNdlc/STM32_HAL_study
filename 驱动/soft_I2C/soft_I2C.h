@@ -45,7 +45,7 @@ typedef struct {
 } I2C_Soft_HandleTypeDef;
 
 // 初始化函数
-HAL_StatusTypeDef I2C_Soft_Init(I2C_Soft_HandleTypeDef *hi2c, uint32_t sys_clk_freq);
+HAL_StatusTypeDef I2C_Soft_Init(I2C_Soft_HandleTypeDef *hi2c);
 
 // 设置时序配置
 void I2C_Soft_SetTiming(I2C_Soft_HandleTypeDef *hi2c, const I2C_Soft_TimingConfig *timing);
