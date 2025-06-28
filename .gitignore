@@ -3,6 +3,7 @@
 
 # 忽略所有项目根目录下的 Objects 文件夹
 **/Debug/
+**/Output/
 
 # Object files
 *.o
