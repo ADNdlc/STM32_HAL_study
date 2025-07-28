@@ -37,8 +37,8 @@ ENTRY(Reset_Handler)
 /* Highest address of the user mode stack */
 _estack = ORIGIN(RAM_D1) + LENGTH(RAM_D1);    /* end of RAM */
 /* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0x200;      /* required amount of heap  */
-_Min_Stack_Size = 0x400; /* required amount of stack */
+_Min_Heap_Size = 0x400;      /* required amount of heap  */
+_Min_Stack_Size = 0x800; /* required amount of stack */
 
 /* Specify the memory areas */
 MEMORY
@@ -181,37 +181,29 @@ SECTIONS
 
 /* ======================================================== ↓ 用户定义区 ↓ ======================================================== */
 
-/* --------------------------- ↓ 外部SDRAM ↓ --------------------------- */
 /* 定义外部内存区域 */
 MEMORY {
   SDRAM (xrw) : ORIGIN = 0xC0000000, LENGTH = 32M  /* 定义SDRAM区域 */
-}
-SECTIONS {
-	/* 外部sdram区域 */
-	.sdram_section (NOLOAD) : {
-		*(.sdram_section)/* 将变量放入此段 */
-	} > SDRAM
 }
 
 
 /* 定义内存池区域 */
 SECTIONS {
-
-	/* 外部sdram内存池 */
-	.sdram_pool 0XC01F4000 :
+	/* --------------------------- ↓ 外部SDRAM ↓ --------------------------- */
+	/* NOLOAD 属性告诉加载器不要在烧录时初始化这片内存 */
+	.sdram_pool 0XC01F4000 (NOLOAD) :
 	{
-	    . = ALIGN(64);
-	    *(.sdram_pool)
-	    . = ALIGN(64);
+		. = ALIGN(64);
+		KEEP(*(.sdram_pool))
+		. = ALIGN(64);
 	} >SDRAM
 	
-	.sdram_map (ADDR(.sdram_pool) + SIZEOF(.sdram_pool)) :
+		.sdram_map (ADDR(.sdram_pool) + SIZEOF(.sdram_pool)) (NOLOAD) :
 	{
 		. = ALIGN(4);
-		*(.sdram_map)
+		KEEP(*(.sdram_map))
 	} >SDRAM
-	
-	
+
 	/* --------------------------- ↓ ITCM ↓ --------------------------- */
 	/* ITCM内存池 */
 	.itcm_pool 0x00000000 :

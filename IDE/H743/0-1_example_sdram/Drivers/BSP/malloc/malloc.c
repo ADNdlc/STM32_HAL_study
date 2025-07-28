@@ -1,5 +1,6 @@
 #include "MALLOC/malloc.h"
 
+#if 0
 #ifdef __ARMCC_VERSION
 #if !(__ARMCC_VERSION >= 6010050) /* 不是AC6编译器，即使用AC5编译器时 */
 
@@ -39,6 +40,7 @@ static MT_TYPE mem6mapbase[MEM6_ALLOC_TABLE_SIZE] __attribute__((section(".bss.A
 #endif
 #endif
 
+#endif
 
 #ifdef __GNUC__
 // 这里是GCC编译器(cubeide)的代码
@@ -49,7 +51,7 @@ static uint8_t mem3base[MEM3_MAX_SIZE] __attribute__((section(".sram12_pool"), a
 static uint8_t mem4base[MEM4_MAX_SIZE] __attribute__((section(".sram4_pool"), aligned(64)));	//D3域AHB SRAM4 = 64K
 static uint8_t mem5base[MEM5_MAX_SIZE] __attribute__((section(".dtcm_pool"), aligned(64)));		//数据TCM RAM = 128 K
 static uint8_t mem6base[MEM6_MAX_SIZE] __attribute__((section(".itcm_pool"), aligned(64)));		//指令TCM RAM = 64 K
-/* 内存管理表 */
+/* 内存管理表(每一项的大小) */
 static MT_TYPE mem1mapbase[MEM1_ALLOC_TABLE_SIZE];                                       		/* 内部SRAM内存池MAP */
 static MT_TYPE mem2mapbase[MEM2_ALLOC_TABLE_SIZE] __attribute__((section(".sdram_map")));		/* 外部SDRAM内存池MAP */
 static MT_TYPE mem3mapbase[MEM3_ALLOC_TABLE_SIZE] __attribute__((section(".sram12_map")));		/* 内部SRAM1+SRAM2内存池MAP */
@@ -59,24 +61,24 @@ static MT_TYPE mem6mapbase[MEM6_ALLOC_TABLE_SIZE] __attribute__((section(".itcm_
 #endif
 
 
-
-/* 内存管理参数 */
+/* ================================= 内存管理参数(用于查表法获取大小) ================================== */
+/* 内存表大小,记录对应内存管理表的大小 */
 const uint32_t memtblsize[SRAMBANK] = {MEM1_ALLOC_TABLE_SIZE, MEM2_ALLOC_TABLE_SIZE, MEM3_ALLOC_TABLE_SIZE,
-                                       MEM4_ALLOC_TABLE_SIZE, MEM5_ALLOC_TABLE_SIZE, MEM6_ALLOC_TABLE_SIZE}; /* 内存表大小 */
-
+                                       MEM4_ALLOC_TABLE_SIZE, MEM5_ALLOC_TABLE_SIZE, MEM6_ALLOC_TABLE_SIZE};
+/* 内存分块大小,记录对应内存块的大小 */
 const uint32_t memblksize[SRAMBANK] = {MEM1_BLOCK_SIZE, MEM2_BLOCK_SIZE, MEM3_BLOCK_SIZE,
-                                       MEM4_BLOCK_SIZE, MEM5_BLOCK_SIZE, MEM6_BLOCK_SIZE}; /* 内存分块大小 */
-
+                                       MEM4_BLOCK_SIZE, MEM5_BLOCK_SIZE, MEM6_BLOCK_SIZE};
+/* 内存池总大小,记录对应内存池的大小 */
 const uint32_t memsize[SRAMBANK] = {MEM1_MAX_SIZE, MEM2_MAX_SIZE, MEM3_MAX_SIZE,
-                                    MEM4_MAX_SIZE, MEM5_MAX_SIZE, MEM6_MAX_SIZE}; /* 内存总大小 */
+                                    MEM4_MAX_SIZE, MEM5_MAX_SIZE, MEM6_MAX_SIZE};
 
 /* 内存管理控制器 */
-struct _m_mallco_dev mallco_dev ={
+struct _m_mallco_dev mallco_dev = {
 	my_mem_init,                                                                  /* 内存初始化函数 */
 	my_mem_perused,                                                               /* 内存使用率函数 */
-	mem1base, mem2base, mem3base, mem4base, mem5base, mem6base,                   /* 内存池 */
-	mem1mapbase, mem2mapbase, mem3mapbase, mem4mapbase, mem5mapbase, mem6mapbase, /* 内存管理状态表 */
-	0, 0, 0, 0, 0, 0,                                                             /* 内存管理未就绪 */
+	{mem1base, mem2base, mem3base, mem4base, mem5base, mem6base},                   /* 内存池(各个内存池数组的首地址,必须按顺序放) */
+	{mem1mapbase, mem2mapbase, mem3mapbase, mem4mapbase, mem5mapbase, mem6mapbase}, /* 内存管理状态表(各个各个内存表的首地址) */
+	{0, 0, 0, 0, 0, 0}                                                           	/* 状态位,内存管理未就绪 */
 };
 
 /**
@@ -86,8 +88,7 @@ struct _m_mallco_dev mallco_dev ={
  * @param       n    : 需要复制的内存长度(字节为单位)
  * @retval      无
  */
-void my_mem_copy(void *des, void *src, uint32_t n)
-{
+void my_mem_copy(void *des, void *src, uint32_t n){
     uint8_t *xdes = des;
     uint8_t *xsrc = src;
     while (n--)
@@ -101,21 +102,20 @@ void my_mem_copy(void *des, void *src, uint32_t n)
  * @param       count : 需要设置的内存大小(字节为单位)
  * @retval      无
  */
-void my_mem_set(void *s, uint8_t c, uint32_t count)
-{
+void my_mem_set(void *s, uint8_t c, uint32_t count){
     uint8_t *xs = s;
     while (count--)
         *xs++ = c;
 }
 
 /**
- * @brief       内存管理初始化
+ * @brief       内存管理初始化(初始化memx对应内存块)
  * @param       memx : 所属内存块
  * @retval      无
  */
-void my_mem_init(uint8_t memx)
-{
-    uint8_t mttsize = sizeof(MT_TYPE);                                  /* 获取memmap数组的类型长度(uint16_t /uint32_t)*/
+void my_mem_init(uint8_t memx){
+    uint8_t mttsize = sizeof(MT_TYPE); //一个表项大小(字节)               /* 获取memmap数组的类型长度(uint16_t /uint32_t)*/
+    //根据memx获取对应内存管理表地址	设置值	设置范围(大小)
     my_mem_set(mallco_dev.memmap[memx], 0, memtblsize[memx] * mttsize); /* 内存状态表数据清零 */
     mallco_dev.memrdy[memx] = 1;                                        /* 内存管理初始化OK */
 }
@@ -125,11 +125,9 @@ void my_mem_init(uint8_t memx)
  * @param       memx : 所属内存块
  * @retval      使用率(扩大了10倍,0~1000,代表0.0%~100.0%)
  */
-uint16_t my_mem_perused(uint8_t memx)
-{
+uint16_t my_mem_perused(uint8_t memx){
     uint32_t used = 0;
     uint32_t i;
-
     for (i = 0; i < memtblsize[memx]; i++)
     {
         if (mallco_dev.memmap[memx][i])
@@ -137,7 +135,6 @@ uint16_t my_mem_perused(uint8_t memx)
             used++;
         }
     }
-
     return (used * 1000) / (memtblsize[memx]);
 }
 

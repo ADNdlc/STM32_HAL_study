@@ -126,18 +126,24 @@ int main(void)
 #endif
   SDRAM_InitSequence();
 
+  HAL_Delay(1000);
+  fsmc_sdram_test();
+
   //内存池初始化
-  for(int i = 0; i < SRAMBANK; i++)
-  {
-      mallco_dev.init(i);
-  }
+  HAL_Delay(1000);
+  my_mem_init(SRAMIN);
+  my_mem_init(SRAMEX);
+  my_mem_init(SRAM12);
+  my_mem_init(SRAM4);
+  my_mem_init(SRAMDTCM);
+  my_mem_init(SRAMITCM);
+  printf("mallco init success!!\r\n");
 
   //内存速度测试
   memory_speed_test_all();
 
-  //fsmc_sdram_test();
 
-  //fsmc_sdram_test();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */

@@ -51,14 +51,15 @@ static void memory_speed_test(uint8_t memx, const char *mem_name)
         printf("Failed to allocate memory from %s. Test skipped.\r\n", mem_name);
         return;
     }
-
+    printf("Succss to allocate memory from %s. Test skipped.\r\n", mem_name);
     // ------------------- 写速度测试 -------------------
 
     // 在测试前，清理并使数据缓存无效，确保我们测量的是到RAM的真实写入速度
-    SCB_CleanInvalidateDCache();
+    //SCB_CleanInvalidateDCache();//此工程没有启用Cache,这会导致死机
 
     // 禁用中断，防止测试被干扰
     __disable_irq();
+
 
     start_cycles = DWT->CYCCNT; // 记录开始时的CPU周期数
 
@@ -83,7 +84,7 @@ static void memory_speed_test(uint8_t memx, const char *mem_name)
     // ------------------- 读速度测试 -------------------
 
     // 再次清理缓存，确保我们测量的是从RAM的真实读取速度
-    SCB_CleanInvalidateDCache();
+    //SCB_CleanInvalidateDCache();
 
     __disable_irq();
 
@@ -132,6 +133,8 @@ void memory_speed_test_all(void)
 
     // 注意：ITCM是指令紧耦合内存，主要用于存放代码，不适合做数据读写测试。
     // 对它进行数据操作会通过较慢的总线路径，速度会很慢，这里我们跳过它。
+    // 使用uint8_t数据进行测试不能达到32/64位总线的最大吞吐量，只能反应一个相对速度
+    // 对外部sdram的写入速度实际上测的是cpu写入FIFO的速度(并不是cpu发起传输到fmc完成操作的真实时间),会异常偏高
     // memory_speed_test(SRAMITCM, "ITCM RAM");
 
     memory_speed_test(SRAMDTCM, "DTCM RAM");

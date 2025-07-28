@@ -87,4 +87,5 @@ int _fstat(int fd, struct stat* st) {
   return 0;
 }
 
+
 #endif //#if !defined(OS_USE_SEMIHOSTING)
