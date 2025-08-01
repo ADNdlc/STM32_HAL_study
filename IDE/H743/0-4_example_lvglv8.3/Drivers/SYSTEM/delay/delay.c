@@ -82,8 +82,8 @@ void delay_init(uint16_t sysclk)
  * @param     nus: 要延时的us数
  * @note      nus取值范围: 0~8947848(最大值即2^32 / g_fac_us @g_fac_us = 480)
  * @retval    无
- */
-void delay_us(uint32_t nus)
+ */delay_us
+void (uint32_t nus)
 {
     uint32_t ticks;
     uint32_t told, tnow, tcnt = 0;

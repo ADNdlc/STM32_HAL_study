@@ -33,7 +33,6 @@
 static void ct_iic_delay(void)
 {
     //delay_us(2);
-	HAL_Delay(2);
 }
 
 /**

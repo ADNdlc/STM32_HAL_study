@@ -9,7 +9,6 @@
 #define _TOUCH_GT9XXX_H_
 
 #include "ctiic.h"
-#include "../SYSTEM/delay/delay.h"
 
 /* GT9XXX INT 和 RST 引脚 定义 */
 #define GT9XXX_RST_GPIO_PORT            GPIOI

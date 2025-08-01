@@ -137,7 +137,6 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
   delay_init(480);								//自定义延时初始化
-
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -199,6 +198,7 @@ int main(void)
     lv_label_set_text(myLabel, "Hello world!");                                  // 设置标签的文本
     lv_obj_align(myLabel, LV_ALIGN_CENTER, 0, 0);                                // 对齐于：父对象
     lv_obj_align_to(myBtn, myLabel, LV_ALIGN_OUT_TOP_MID, 0, -20);               // 对齐于：某对象
+
 #endif
 
     HAL_TIM_Base_Start_IT(&htim6);//开启lvgl时基

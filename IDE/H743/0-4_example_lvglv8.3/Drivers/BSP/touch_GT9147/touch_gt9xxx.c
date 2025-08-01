@@ -108,10 +108,9 @@ uint8_t gt9xxx_init(void)
 #endif
     //设定地址为0xBA/OxBB的时序: 释放RST时,INT为低
     GT9XXX_RST(0);                                          /* 复位 */
-    delay_ms(10);
+    HAL_Delay(10);
     GT9XXX_RST(1);                                          /* 释放复位 */
-    delay_ms(10);
-
+    HAL_Delay(10);
     /* 转换INT引脚模式设置, 输入模式, 浮空输入 */
     gpio_init_struct.Pin = GT9XXX_INT_GPIO_PIN;
     gpio_init_struct.Mode = GPIO_MODE_INPUT;                /* 输入 */
@@ -119,7 +118,7 @@ uint8_t gt9xxx_init(void)
     gpio_init_struct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;     /* 高速 */
     HAL_GPIO_Init(GT9XXX_INT_GPIO_PORT, &gpio_init_struct); /* 初始化INT引脚 */
 
-    delay_ms(100);
+    HAL_Delay(100);
     gt9xxx_rd_reg(GT9XXX_PID_REG, temp, 4);                 /* 读取产品ID */
     temp[4] = 0;
     /* 判断一下是否是特定的触摸屏 */
@@ -139,7 +138,8 @@ uint8_t gt9xxx_init(void)
     temp[0] = 0X02;
     gt9xxx_wr_reg(GT9XXX_CTRL_REG, temp, 1);                /* 软复位GT9XXX */
 
-    delay_ms(10);
+    //delay_ms(10);
+    HAL_Delay(10);
 
     temp[0] = 0X00;
     gt9xxx_wr_reg(GT9XXX_CTRL_REG, temp, 1);                /* 结束复位, 进入读坐标状态 */

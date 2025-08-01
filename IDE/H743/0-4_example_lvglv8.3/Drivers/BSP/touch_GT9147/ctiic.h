@@ -25,7 +25,7 @@
 #ifndef __MYCT_IIC_H
 #define __MYCT_IIC_H
 
-#include "../SYSTEM/sys/sys.h"
+#include "sys/sys.h"
 
 /******************************************************************************************/
 
