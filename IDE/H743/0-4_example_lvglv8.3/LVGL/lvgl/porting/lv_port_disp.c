@@ -149,6 +149,7 @@ void lv_port_disp_init(void)
 static void disp_init(void)
 {
     /*You code here*/
+	//使用ltdc驱动屏幕,初始化代码在HAL库生成代码中
 }
 
 volatile bool disp_flush_enabled = true;

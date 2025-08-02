@@ -4,13 +4,14 @@
  */
 
 /*Copy this file as "lv_port_fs.c" and set this value to "1" to enable content*/
-#if 0
+#if 0	//此文件是一个关联文件系统的通用框架
 
 /*********************
  *      INCLUDES
  *********************/
-#include "lv_port_fs_template.h"
-#include "../../lvgl.h"
+#include <lv_port_fs.h>
+#include "lvgl.h"
+
 
 /*********************
  *      DEFINES
@@ -69,7 +70,7 @@ void lv_port_fs_init(void)
     lv_fs_drv_init(&fs_drv);
 
     /*Set up fields...*/
-    fs_drv.letter = 'P';
+    fs_drv.letter = '0';
     fs_drv.open_cb = fs_open;
     fs_drv.close_cb = fs_close;
     fs_drv.read_cb = fs_read;

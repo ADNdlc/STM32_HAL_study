@@ -10,6 +10,7 @@
 
 void fatfs_test(void) {
     printf(" ====================== fatfs_test ======================\r\n");
+    /* =================================== 驱动器挂载 ========================================= */
     //文件系统句柄名称, 驱动器号, 1:立即挂载 0:操作时挂载
     FRESULT res = f_mount(&SDFatFS, "0:", 1);//挂载卷
     if (res == FR_OK) {             //挂载成功
@@ -37,8 +38,8 @@ void fatfs_test(void) {
         printf(" Err code is %d\r\n",res);
     }
 
-    HAL_Delay(500);
-    //获取系统信息
+    HAL_Delay(200);
+    /* =================================== 获取系统信息 ========================================= */
     FATFS *fs;  //  返回的文件系统指针
     DWORD free_clust;//剩余簇的数量
     // 驱动器号, 返回值， 返回指向文件系统的指针
@@ -55,14 +56,22 @@ void fatfs_test(void) {
     DWORD total_space = (total_sector >> 11);	//计算总空间(MB)
 	DWORD free_space = (free_sector >> 11);		//计算剩余空间(MB)
 #endif
+#if _MAX_SS != _MIN_SS
+	DWORD free_space =(free_sector * fs->ssize) >> 10;
+	DWORD total_space =(total_sector *fs->ssize)>> 10;
+#endif
     //打印系统信息
     printf(" FAT type = %d\r\n",fs->fs_type);
     printf("  FS_FAT12 = 1\r\n");
     printf("  FS_FAT16 = 2\r\n");
     printf("  FS_FAT32 = 3\r\n");
     printf("  FS_exFAT = 4\r\n\r\n");
-
+#if _MAX_SS == _MIN_SS
     printf(" Sector size(bytes)= %d\r\n",_MIN_SS);		//一个扇区大小,
+#endif
+#if _MAX_SS != _MIN_SS
+    printf(" Sector size(bytes)= %d\r\n",fs->ssize);		//一个扇区大小,
+#endif
     printf(" Cluster size(sectors)= %u\r\n",fs->csize); //一个簇大小,
 
     printf(" Total Sector count = %lu\r\n",total_sector);	//扇区数量,
@@ -73,6 +82,55 @@ void fatfs_test(void) {
     printf(" free Sector count = %lu\r\n",free_sector);	//剩余扇区数
     printf(" free Cluster count = %lu\r\n",free_clust); 	//剩余簇数
     printf(" free space = %lu(MB)\r\n",free_space);		//剩余空间(MB)
+
+    /* =================================== 文件读写测试 ========================================= */
+    FIL file;			//文件对象
+    FRESULT res;		//操作结果
+    //文本文件写入
+       //文件对象, 文件名称,  		操作模式(打开文件不存在则创建并把读写指针定位到尾端,可写)
+    res = f_open(&file, "readme.txt",FA_OPEN_APPEND|FA_WRITE);//新建和打开文件用的是同一个函数,只是操作模式不同
+    if(res == FR_OK){
+    	f_puts("Line: hello\n", &file);
+    	printf("write file OK :%S", "readme.txt");
+    }else{
+    	printf("write file ERR!!");
+    }
+    f_close(&file);//关闭文件,写入存储介质
+
+    //二进制数据写入binary
+    uint8_t temp_buf[40];
+
+
+
+    /* =================================== 路径操作测试 ========================================= */
+    DIR 	dir;		//返回的目录对象
+    FILINFO dir_info;	//文件信息
+
+    res = f_opendir(&dir,"0:");
+    if (res != FR_OK){
+    	f_closedir(&dir);
+    	printf("dir not exist");
+    }
+    else {
+    	printf("\r\n==============================\r\nAll DIR and FILE :");
+    	while(1){
+    		res = f_readdir(&dir, &dir_info);			//按顺序读取目录项
+    		if(res != FR_OK || dir_info.fname[0]== 0){	//读取失败或为空
+
+    		}
+    		if(dir_info.fattrib & AM_DIR){	//判断"目录条目的文件属性"是否为路径
+    			printf("DIR &s\r\n", dir_info.fname);
+    		}else{							//不是路径说明是文件
+    			printf("FILE %s\r\n", dir_info.fname);
+    		}
+    	}
+    	printf("\r\n==============================");
+    	f_closedir(&dir);//操作完要关闭路径对象
+    }
+
+
+
+
 
     printf(" ==================== fatfs_test cplt ====================\r\n");
 }

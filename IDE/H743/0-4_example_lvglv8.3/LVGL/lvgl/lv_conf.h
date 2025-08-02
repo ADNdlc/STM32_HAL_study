@@ -603,10 +603,10 @@
 #define LV_USE_GRID 1
 
 /*---------------------
- * 3rd party libraries
+ * 第三方库
  *--------------------*/
 
-/*File system interfaces for common APIs */
+/* 文件系统接口通用api  */
 
 /*API for fopen, fread, etc*/
 #define LV_USE_FS_STDIO 0
@@ -632,10 +632,10 @@
     #define LV_FS_WIN32_CACHE_SIZE 0    /*>0 to cache this number of bytes in lv_fs_read()*/
 #endif
 
-/*API for FATFS (needs to be added separately). Uses f_open, f_read, etc*/
-#define LV_USE_FS_FATFS 0
+/* API for FATFS ( 需要单独添加 ). Uses f_open, f_read, etc*/
+#define LV_USE_FS_FATFS 1
 #if LV_USE_FS_FATFS
-    #define LV_FS_FATFS_LETTER '\0'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
+    #define LV_FS_FATFS_LETTER '0'     /*Set an upper cased letter on which the drive will accessible (e.g. 'A')*/
     #define LV_FS_FATFS_CACHE_SIZE 0    /*>0 to cache this number of bytes in lv_fs_read()*/
 #endif
 

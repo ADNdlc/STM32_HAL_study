@@ -51,6 +51,7 @@
 #include "RAMspeed_test/speed_test.h"	//melloc测试不同ram区速度
 #include "SDCARD_test/SDCARD_test.h"	//SD卡基本读写测试
 #include "FATFS_test/FATFS_test.h"		//fatfs文件系统测试
+#include "LVGL_test/LVGL_test.h"		//LVGL文件系统测试
 
 /* USER CODE END Includes */
 
@@ -99,7 +100,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 		Times6++;
 		if(Times6 >= 500){
-			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_1);
+			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_1);//led闪烁指示
 			Times6 = 0;
 		}
 	}
@@ -129,6 +130,11 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+#define usart1_echo			1
+#define sdram_base_test		0
+#define memory_speed_test	0	//malloc
+#define fatfs_base_test		1	//直接操作fatfs
+#define lvgl_base_test		1	//lvgl基本显示测试
 
   /* USER CODE END Init */
 
@@ -153,15 +159,19 @@ int main(void)
   /* USER CODE BEGIN 2 */
   Button_Init();								//按钮初始化(这个还没有加入到lvgl组)
   RetargetInit(&huart1);						//绑定printf使用的串口
+#if usart1_echo
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t*)receivData, 50);//开启接收
+#endif
 #ifndef NDEBUG
   printf("printf init success!!\r\n");
 #endif
   SDRAM_InitSequence();							//外部SDRAM初始化
 
-  //fsmc_sdram_test();			//sdram基本读写测试
+#if  sdram_base_test
+  fsmc_sdram_test();			//sdram基本读写测试
+#endif
 
-  HAL_Delay(400);								//内存池初始化
+  HAL_Delay(100);								//内存池初始化
   my_mem_init(SRAMIN);							//D1域
   my_mem_init(SRAMEX);							//外部SDRAM
   my_mem_init(SRAM12);							//D2域
@@ -171,37 +181,26 @@ int main(void)
 #ifndef NDEBUG
   printf("mallco init success!!\r\n");
 #endif
-
-  //memory_speed_test_all();	//内存速度测试
-
+#if  sdram_base_test
+  memory_speed_test_all();		//内存速度测试
+#endif
 /* ================================ fatFS ===================================== */
+#if  fatfs_base_test
+    fatfs_test();				//文件系统测试
+#endif
 
-    fatfs_test();								//文件系统测试
 
-/* ================================= LVGL ===================================== */
+/* ================================= LVGL初始化 ===================================== */
     lv_init();                             		// LVGL 初始化
     lv_port_disp_init();                   		// 注册LVGL的显示任务
     lv_port_indev_init();                  		// 注册LVGL的触屏检测任务
+    HAL_TIM_Base_Start_IT(&htim6);				//开启lvgl时基
 /* ============================================================================ */
 
-#if 1
-    // 按钮
-    lv_obj_t *myBtn = lv_btn_create(lv_scr_act());                               // 创建按钮; 父对象：当前活动屏幕
-    lv_obj_set_pos(myBtn, 10, 10);                                               // 设置坐标
-    lv_obj_set_size(myBtn, 120, 50);                                             // 设置大小
-    // 按钮上的文本
-    lv_obj_t *label_btn = lv_label_create(myBtn);                                // 创建文本标签，父对象：上面的btn按钮
-    lv_obj_align(label_btn, LV_ALIGN_CENTER, 0, 0);                              // 对齐于：父对象
-    lv_label_set_text(label_btn, "Test");                                        // 设置标签的文本
-    // 独立的标签
-    lv_obj_t *myLabel = lv_label_create(lv_scr_act());                           // 创建文本标签; 父对象：当前活动屏幕
-    lv_label_set_text(myLabel, "Hello world!");                                  // 设置标签的文本
-    lv_obj_align(myLabel, LV_ALIGN_CENTER, 0, 0);                                // 对齐于：父对象
-    lv_obj_align_to(myBtn, myLabel, LV_ALIGN_OUT_TOP_MID, 0, -20);               // 对齐于：某对象
-
+#if lvgl_base_test
+    lvgl_basic_test();			//lvgl基本显示测试
 #endif
 
-    HAL_TIM_Base_Start_IT(&htim6);//开启lvgl时基
 
   /* USER CODE END 2 */
 
@@ -209,6 +208,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+#if usart1_echo
+	if (dataReady) {HAL_UART_Transmit_DMA(&huart1, (uint8_t *) receivData, strlen(receivData));dataReady = 0;}//回显
+#endif
 
 	lv_timer_handler();
 	HAL_Delay(5);
