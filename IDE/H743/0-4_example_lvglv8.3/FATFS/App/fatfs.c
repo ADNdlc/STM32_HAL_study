@@ -48,9 +48,9 @@ DWORD get_fattime(void)
   /* USER CODE BEGIN get_fattime */
 	RTC_TimeTypeDef sTime;
 	RTC_DateTypeDef sDate;
-	if(HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK){
+	if(HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN) == HAL_OK){
 		HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
-		WORD date=((sDate.Year+2000-1980) << 9) | (sDate.Month << 5) | sDate.Date;
+		WORD date=((2000 + sDate.Year - 1980) << 9) | (sDate.Month << 5) | sDate.Date;
 		WORD time =(sTime.Hours << 11) | (sTime.Minutes << 5) | (sTime.Seconds >> 1);
 		DWORD fatTime =((DWORD)date << 16) | time;
 		return fatTime;

@@ -83,53 +83,125 @@ void fatfs_test(void) {
     printf(" free Cluster count = %lu\r\n",free_clust); 	//剩余簇数
     printf(" free space = %lu(MB)\r\n",free_space);		//剩余空间(MB)
 
+
+
     /* =================================== 文件读写测试 ========================================= */
+    printf(" ================== operational testing =================== \r\n");
     FIL file;			//文件对象
-    FRESULT res;		//操作结果
+    FRESULT res0;		//操作结果
     //文本文件写入
-       //文件对象, 文件名称,  		操作模式(打开文件不存在则创建并把读写指针定位到尾端,可写)
-    res = f_open(&file, "readme.txt",FA_OPEN_APPEND|FA_WRITE);//新建和打开文件用的是同一个函数,只是操作模式不同
-    if(res == FR_OK){
-    	f_puts("Line: hello\n", &file);
-    	printf("write file OK :%S", "readme.txt");
+       	   	   //文件对象, 文件名称,  		操作模式(打开文件不存在则创建并把读写指针定位到尾端,可写)
+    res0 = f_open(&file, "readme.txt",FA_OPEN_APPEND|FA_WRITE);//新建和打开文件用的是同一个函数,只是操作模式不同
+    if(res0 == FR_OK){
+    	f_puts("hello fatfs\n", &file);
+    	printf(" write to readme.txt OK!\r\n");
     }else{
-    	printf("write file ERR!!");
+    	printf(" write file ERR!!!\r\n");
     }
     f_close(&file);//关闭文件,写入存储介质
 
     //二进制数据写入binary
-    uint8_t temp_buf[40];
+    FIL file1;			//文件对象
+    FRESULT res1 = f_open(&file1, "value.txt", FA_CREATE_ALWAYS|FA_WRITE);//始终创建(覆盖),写
+    uint8_t value = 0;
+    UINT	bw;			//实际写入字节数
+    if(res1 == FR_OK){
+    	for(uint16_t i=0;  i < 100; i++, value++){
+    			//写入文件, 写入值, 需要写入字节数, 实际写入字节数
+    		f_write(&file, &value, sizeof(value), &bw);
+    	}
+    	printf(" write to value.txt OK, write count: %d, pointsize: %d\r\n", 100, bw);
+
+    }else{
+    	printf(" write file1 ERR!!!\r\n");
+    }
+    f_close(&file1);//关闭文件,写入存储介质
 
 
+    //读文件,并打印
+    uint8_t show_str[40];
+    FIL file2;
+    //打开文件使用相对路径, 此时需要看当前目录(CWD),
+    FRESULT res2 = f_open(&file2, "readme.txt", FA_READ);
+    if(res2 == FR_OK){
+    	//判断读写指针是否到达文件尾
+    	for(uint8_t i = 1; (!f_eof(&file2)); i++){
+    		//字符串缓冲区, 缓冲区大小, 文件
+    		f_gets(show_str, 40, &file2);	//从文件获取字符串,遇到换行符停止
+    		printf(" Line%d:%s \r\n", i, show_str);	//打印此行, 读写指针自动增加下次读取下一行
 
-    /* =================================== 路径操作测试 ========================================= */
+    	}
+    }
+    else if(res2 == FR_NO_FILE){
+    	printf(" readme.txt does not exist!!!\r\n");
+    }
+    else{
+    	printf(" read file ERR!!!\r\n");
+    }
+    f_close(&file2);
+
+
+    /* ========================================= 路径操作测试 ========================================= */
     DIR 	dir;		//返回的目录对象
-    FILINFO dir_info;	//文件信息
+    FILINFO dir_info;	//存储一个文件或目录的元数据信息
 
-    res = f_opendir(&dir,"0:");
+    res = f_opendir(&dir,"0:/");
     if (res != FR_OK){
     	f_closedir(&dir);
-    	printf("dir not exist");
+    	printf(" dir does not exist!!!\r\n");
     }
     else {
-    	printf("\r\n==============================\r\nAll DIR and FILE :");
+        //创建目录
+        f_mkdir("0:/file1");
+        f_mkdir("0:/file2");
+
+    	/* 打印此目录下的所有项目 */
+    	printf("\r\n ==============================\r\nAll items :\r\n");
     	while(1){
     		res = f_readdir(&dir, &dir_info);			//按顺序读取目录项
     		if(res != FR_OK || dir_info.fname[0]== 0){	//读取失败或为空
-
+    			break;
     		}
     		if(dir_info.fattrib & AM_DIR){	//判断"目录条目的文件属性"是否为路径
-    			printf("DIR &s\r\n", dir_info.fname);
+    			printf("DIR :&s\r\n", dir_info.fname);
     		}else{							//不是路径说明是文件
-    			printf("FILE %s\r\n", dir_info.fname);
+    			printf("FILE :%s\r\n", dir_info.fname);
     		}
     	}
-    	printf("\r\n==============================");
+    	printf(" ==============================\r\n");
     	f_closedir(&dir);//操作完要关闭路径对象
     }
 
 
+    /* ========================================= 获取文件信息 ========================================= */
+    FILINFO file_info;
 
+    FRESULT res3 = f_stat("readme.txt", &file_info);//获取文件信息,
+    if (res3 == FR_OK){
+    	printf(" File size(bytes) = %d\r\n", file_info.fsize);	//显示文件大小,如果此路径项是一个目录,则此成员为0
+
+    	printf(" File attribute = 0x%x\r\n",file_info.fattrib);//文件属性,应该是0x20即归档文件
+
+    	printf(" File name = %s\r\n", file_info.fname);	//文件名称
+
+    	//修改时间
+    	RTC_DateTypeDef sDate;
+    	RTC_TimeTypeDef sTime;
+
+    	sDate.Date = file_info.fdate & 0x001F;
+    	sDate.Month = (file_info.fdate & 0x01E0) >> 5;
+    	sDate.Year = 1980 + ((file_info.fdate & 0xFEE0)>>9) - 2000;//文件系统和RTC开始年份不同,需要换算,
+
+    	sTime.Hours = (file_info.ftime & 0xF800) >> 11;
+    	sTime.Minutes = (file_info.ftime & 0x07E0) >> 5;
+    	sTime.Seconds = (file_info.ftime & 0x001F) << 1;
+
+    	printf(" File Date = %04d-%02d-%02d\r\n", sDate.Year, sDate.Month, sDate.Date);
+    	printf(" File Time = %02d:%02d:%02d\r\n", sTime.Hours, sTime.Minutes, sTime.Seconds);
+    }
+    else{
+    	printf(" get file info ERR!!!\r\n");
+    }
 
 
     printf(" ==================== fatfs_test cplt ====================\r\n");
