@@ -61,9 +61,10 @@
 									<listOptionValue builtIn="false" value="../Drivers/SYSTEM/sys"/>
 									<listOptionValue builtIn="false" value="../Drivers/SYSTEM/delay"/>
 									<listOptionValue builtIn="false" value="../LVGL/lvgl/porting"/>
+									<listOptionValue builtIn="false" value="../LVGL/lvgl"/>
+									<listOptionValue builtIn="false" value="../LVGL/LVGL_APP"/>
 									<listOptionValue builtIn="false" value="../LVGL/LVGL_APP/demos"/>
 									<listOptionValue builtIn="false" value="../Application"/>
-									<listOptionValue builtIn="false" value="../LVGL/lvgl"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.1640579390" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>

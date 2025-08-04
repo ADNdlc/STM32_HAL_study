@@ -53,6 +53,12 @@
 #include "FATFS_test/FATFS_test.h"		//fatfs文件系统测试
 #include "LVGL_test/LVGL_test.h"		//LVGL文件系统测试
 
+#include "ui/Act_Manager.h"		//ui界面
+
+
+extern uint32_t vsync_count;
+extern uint32_t LTDCcount;
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -100,7 +106,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 		Times6++;
 		if(Times6 >= 500){
-			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_1);//led闪烁指示
+			HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);//led闪烁指示
 			Times6 = 0;
 		}
 	}
@@ -133,9 +139,9 @@ int main(void)
 #define usart1_echo			1
 #define sdram_base_test		0
 #define memory_speed_test	0	//malloc
-#define fatfs_base_test		1	//直接操作fatfs
+#define fatfs_base_test		0	//直接操作fatfs
 #define lvgl_base_test		1	//lvgl基本显示测试
-
+#define lvgl_ui_test		0	//ui测试
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -157,6 +163,7 @@ int main(void)
   MX_FATFS_Init();
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
+
   Button_Init();								//按钮初始化(这个还没有加入到lvgl组)
   RetargetInit(&huart1);						//绑定printf使用的串口
 #if usart1_echo
@@ -200,8 +207,9 @@ int main(void)
 #if lvgl_base_test
     lvgl_basic_test();			//lvgl基本显示测试
 #endif
-
-
+#if lvgl_ui_test
+    act_manager_init();
+#endif
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -215,6 +223,7 @@ int main(void)
 	lv_timer_handler();
 	HAL_Delay(5);
 
+	printf("Vcount:%d,Lcount:%d",vsync_count,LTDCcount);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

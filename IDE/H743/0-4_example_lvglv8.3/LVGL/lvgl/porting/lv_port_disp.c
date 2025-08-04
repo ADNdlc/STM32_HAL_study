@@ -11,7 +11,9 @@
  *********************/
 #include <lv_port_disp.h>
 #include <stdbool.h>
-#include "rgbLCD/LCD.h"	//屏幕驱动
+
+#include <lv_conf.h>
+#include "rgbLCD/LCD.h"			// 刷屏函数和缓冲区
 /*********************
  *      DEFINES
  *********************/
@@ -40,7 +42,7 @@ static void disp_init(void);
 
 static void disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);	//画点函数
 //static void gpu_fill(lv_disp_drv_t * disp_drv, lv_color_t * dest_buf, lv_coord_t dest_width,	//DMA2D填充
-//        const lv_area_t * fill_area, lv_color_t color);
+//			   const lv_area_t * fill_area, lv_color_t color);
 
 /**********************
  *  STATIC VARIABLES
@@ -51,6 +53,7 @@ static void disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_colo
  **********************/
 
 #define BufferConfig 1	//使用哪一种缓冲配置
+#define externalbuf  0
 
 /**********************
  *   GLOBAL FUNCTIONS
@@ -90,24 +93,29 @@ void lv_port_disp_init(void)
 #if BufferConfig == 1
     /* Example for 1) */
     static lv_disp_draw_buf_t draw_buf_dsc_1;
-    static lv_color_t buf_1[MY_DISP_HOR_RES * 80];                          /*A buffer for 10 rows*/
-    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * 10);   /*Initialize the display buffer*/
+    static lv_color_t buf_1[MY_DISP_HOR_RES * 240];                          /*A buffer for 10 rows*/
+    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * 240);   /*Initialize the display buffer*/
 
 #endif
 #if BufferConfig == 2
     /* Example for 2) */
     static lv_disp_draw_buf_t draw_buf_dsc_2;
-    static lv_color_t buf_2_1[MY_DISP_HOR_RES * 10];                        /*A buffer for 10 rows*/
-    static lv_color_t buf_2_2[MY_DISP_HOR_RES * 10];                        /*An other buffer for 10 rows*/
+    static lv_color_t buf_2_1[MY_DISP_HOR_RES * 80];                        /*A buffer for 10 rows*/
+    static lv_color_t buf_2_2[MY_DISP_HOR_RES * 80];                        /*An other buffer for 10 rows*/
     lv_disp_draw_buf_init(&draw_buf_dsc_2, buf_2_1, buf_2_2, MY_DISP_HOR_RES * 10);   /*Initialize the display buffer*/
 #endif
 #if BufferConfig == 3
     /* Example for 3) also set disp_drv.full_refresh = 1 below*/
     static lv_disp_draw_buf_t draw_buf_dsc_3;
+#if !externalbuf
     static lv_color_t buf_3_1[MY_DISP_HOR_RES * MY_DISP_VER_RES];            /*A screen sized buffer*/
     static lv_color_t buf_3_2[MY_DISP_HOR_RES * MY_DISP_VER_RES];            /*Another screen sized buffer*/
-    lv_disp_draw_buf_init(&draw_buf_dsc_3, buf_3_1, buf_3_2,
-                          MY_DISP_VER_RES * LV_VER_RES_MAX);   /*Initialize the display buffer*/
+#else
+    lv_color_t* buf_3_1 = (lv_color_t*)ltdc_buf_1;
+	lv_color_t* buf_3_2 = (lv_color_t*)ltdc_buf_2;
+#endif
+	lv_disp_draw_buf_init(&draw_buf_dsc_3, buf_3_1, buf_3_2, MY_DISP_HOR_RES * MY_DISP_VER_RES);   /*Initialize the display buffer*/
+
 #endif
 
     /*-----------------------------------
@@ -127,7 +135,16 @@ void lv_port_disp_init(void)
     disp_drv.flush_cb = disp_flush;
 
     /*Set a display buffer*/
-    disp_drv.draw_buf = &draw_buf_dsc_1;
+#if BufferConfig == 1
+	disp_drv.draw_buf = &draw_buf_dsc_1;
+#endif
+#if BufferConfig == 2
+	disp_drv.draw_buf = &draw_buf_dsc_2;
+#endif
+#if BufferConfig == 3
+	disp_drv.draw_buf = &draw_buf_dsc_3;
+#endif
+
 
     /*Required for Example 3)*/
     //disp_drv.full_refresh = 1;
@@ -175,19 +192,32 @@ static void disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_colo
 {
     if(disp_flush_enabled) {
         /*The most simple case (but also the slowest) to put all pixels to the screen one-by-one*/
-
-        int32_t x;
+    	int32_t x;
         int32_t y;
+#if !LV_USE_GPU_STM32_DMA2D
+
         for(y = area->y1; y <= area->y2; y++) {
             for(x = area->x1; x <= area->x2; x++) {
                 /*Put a pixel to the display. For example:*/
-            	LTDC_Draw_Point_horizontal(x, y, (uint32_t)color_p->full, (uint32_t)LCD_Buffer0);
+            	LTDC_Draw_Point_horizontal(x, y, (uint32_t)color_p->full, (uint32_t)get_BackBuf());
                 /*put_px(x, y, *color_p)*/
                 color_p++;
             }
         }
-    }
-
+#else
+    	x = area->x2 - area->x1 +1;
+    	y = area->y2 - area->y1 +1;
+    	uint32_t dest_addr = (uint32_t)get_BackBuf();
+    	dest_addr += (area->y1 * disp_drv->hor_res + area->x1) * 2;
+    	DMA2D_Copy((void *)(color_p),
+    		       (void *)(dest_addr),
+    				x,
+    				y,
+    				0,
+    				disp_drv->hor_res - x,
+    				LTDC_PIXEL_FORMAT_RGB565);
+#endif
+	}
     /*IMPORTANT!!!
      *Inform the graphics library that you are ready with the flushing*/
     lv_disp_flush_ready(disp_drv);

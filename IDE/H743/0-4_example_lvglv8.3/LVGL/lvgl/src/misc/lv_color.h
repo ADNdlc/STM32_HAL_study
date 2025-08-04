@@ -232,7 +232,7 @@ typedef union {
 } lv_color32_t;
 
 typedef LV_CONCAT3(uint, LV_COLOR_SIZE, _t) lv_color_int_t;
-typedef LV_CONCAT3(lv_color, LV_COLOR_DEPTH, _t) lv_color_t;
+typedef LV_CONCAT3(lv_color, LV_COLOR_DEPTH, _t) lv_color_t;	//lv_color16_t,uint16_t
 
 typedef struct {
     uint16_t h;
