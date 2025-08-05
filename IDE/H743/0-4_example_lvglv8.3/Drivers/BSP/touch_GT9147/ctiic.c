@@ -32,7 +32,7 @@
  */
 static void ct_iic_delay(void)
 {
-    //delay_us(2);
+    delay_us(2);// 使用-O3优化可能导致初始失败
 }
 
 /**

@@ -46,18 +46,17 @@
 #include "lvgl.h"                // 它为整个LVGL提供了更完整的头文件引用
 #include "lv_port_disp.h"        // LVGL的显示支持
 #include "lv_port_indev.h"       // LVGL的触屏支持
+#include "lv_conf.h"
 //APP
 #include "SDRAM_test/sdram_test.h"		//SDRAM基本读写测试
 #include "RAMspeed_test/speed_test.h"	//melloc测试不同ram区速度
 #include "SDCARD_test/SDCARD_test.h"	//SD卡基本读写测试
 #include "FATFS_test/FATFS_test.h"		//fatfs文件系统测试
 #include "LVGL_test/LVGL_test.h"		//LVGL文件系统测试
-
+//lvgl_app
+#include "benchmark/lv_demo_benchmark.h"
 #include "ui/Act_Manager.h"		//ui界面
 
-
-extern uint32_t vsync_count;
-extern uint32_t LTDCcount;
 
 /* USER CODE END Includes */
 
@@ -79,13 +78,14 @@ extern uint32_t LTDCcount;
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-char receivData[50] = {0};	//存放接收内容(记得初始化)
+char receivData[50] = {0};	//存放串口接收内容(记得初始化)
 uint8_t dataReady = 0;		//发送标志位
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
 
 
@@ -117,6 +117,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+#define usart1_echo			1
+#define sdram_base_test		0
+#define memory_speed_test	0	//malloc
+#define fatfs_base_test		0	//直接操作fatfs
+#define lvgl_base_test		0	//lvgl基本显示测试
+#define lvgl_ui_test		0	//ui测试
+
 /* USER CODE END 0 */
 
 /**
@@ -127,7 +134,6 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -136,12 +142,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-#define usart1_echo			1
-#define sdram_base_test		0
-#define memory_speed_test	0	//malloc
-#define fatfs_base_test		0	//直接操作fatfs
-#define lvgl_base_test		1	//lvgl基本显示测试
-#define lvgl_ui_test		0	//ui测试
+
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -162,6 +163,9 @@ int main(void)
   MX_SDMMC1_SD_Init();
   MX_FATFS_Init();
   MX_RTC_Init();
+
+  /* Initialize interrupts */
+  MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 
   Button_Init();								//按钮初始化(这个还没有加入到lvgl组)
@@ -202,7 +206,12 @@ int main(void)
     lv_port_disp_init();                   		// 注册LVGL的显示任务
     lv_port_indev_init();                  		// 注册LVGL的触屏检测任务
     HAL_TIM_Base_Start_IT(&htim6);				//开启lvgl时基
-/* ============================================================================ */
+/* ================================================================================= */
+
+/* ==================================== ui ========================================= */
+#if LV_USE_DEMO_BENCHMARK
+    lv_demo_benchmark();
+#endif
 
 #if lvgl_base_test
     lvgl_basic_test();			//lvgl基本显示测试
@@ -210,6 +219,7 @@ int main(void)
 #if lvgl_ui_test
     act_manager_init();
 #endif
+/* ================================================================================= */
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -223,7 +233,6 @@ int main(void)
 	lv_timer_handler();
 	HAL_Delay(5);
 
-	printf("Vcount:%d,Lcount:%d",vsync_count,LTDCcount);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -293,6 +302,17 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief NVIC Configuration.
+  * @retval None
+  */
+static void MX_NVIC_Init(void)
+{
+  /* DMA2D_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2D_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(DMA2D_IRQn);
 }
 
 /* USER CODE BEGIN 4 */

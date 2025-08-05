@@ -106,6 +106,7 @@ void lv_port_indev_init(void)
      * -----------------*/
 #if Touchpad
     /*Initialize your touchpad if you have*/
+
     touchpad_init();
 
     /*Register a touchpad input device*/

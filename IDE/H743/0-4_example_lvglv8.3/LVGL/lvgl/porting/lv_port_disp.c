@@ -40,20 +40,23 @@
 // 底层函数接口
 static void disp_init(void);
 
-static void disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);	//画点函数
-//static void gpu_fill(lv_disp_drv_t * disp_drv, lv_color_t * dest_buf, lv_coord_t dest_width,	//DMA2D填充
+static void disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_color_t * color_p);	//刷新
+//static void gpu_fill(lv_disp_drv_t * disp_drv, lv_color_t * dest_buf, lv_coord_t dest_width,	//DMA2D
 //			   const lv_area_t * fill_area, lv_color_t color);
+
 
 /**********************
  *  STATIC VARIABLES
  **********************/
+lv_disp_drv_t* it_disp_drv; // 用于在中断中访问,这里直接写在DMA2D_IRQHandler里了
 
 /**********************
  *      MACROS
  **********************/
 
-#define BufferConfig 1	//使用哪一种缓冲配置
-#define externalbuf  0
+#define BufferConfig 		1	//使用哪一种缓冲配置
+#define Always_Whol_Redrawn 0	//总是全屏重绘
+#define externalbuf  		0
 
 /**********************
  *   GLOBAL FUNCTIONS
@@ -145,14 +148,17 @@ void lv_port_disp_init(void)
 	disp_drv.draw_buf = &draw_buf_dsc_3;
 #endif
 
-
     /*Required for Example 3)*/
-    //disp_drv.full_refresh = 1;
-
+#if	Always_Whol_Redrawn
+    disp_drv.full_refresh = 1;	// 总是重绘整个屏幕
+#endif
     /* Fill a memory array with a color if you have GPU.
      * Note that, in lv_conf.h you can enable GPUs that has built-in support in LVGL.
      * But if you have a different GPU you can use with this callback.*/
     //disp_drv.gpu_fill_cb = gpu_fill;
+
+
+    it_disp_drv = &disp_drv; // 保存驱动描述符的地址
 
     /*Finally register the driver*/
     lv_disp_drv_register(&disp_drv);
@@ -209,7 +215,7 @@ static void disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_colo
     	y = area->y2 - area->y1 +1;
     	uint32_t dest_addr = (uint32_t)get_BackBuf();
     	dest_addr += (area->y1 * disp_drv->hor_res + area->x1) * 2;
-    	DMA2D_Copy((void *)(color_p),
+    	DMA2D_Copy_IT((void *)(color_p),
     		       (void *)(dest_addr),
     				x,
     				y,
@@ -218,10 +224,16 @@ static void disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_colo
     				LTDC_PIXEL_FORMAT_RGB565);
 #endif
 	}
+    else{
+    	lv_disp_flush_ready(disp_drv);//刷新被禁止
+    }
     /*IMPORTANT!!!
      *Inform the graphics library that you are ready with the flushing*/
-    lv_disp_flush_ready(disp_drv);
+    //lv_disp_flush_ready(disp_drv);
 }
+
+
+
 
 /*OPTIONAL: GPU INTERFACE*/
 

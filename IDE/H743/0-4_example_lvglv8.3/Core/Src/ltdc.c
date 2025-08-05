@@ -22,7 +22,7 @@
 
 /* USER CODE BEGIN 0 */
 #include "rgbLCD/LCD.h"
-static uint32_t Layer0_Buffer;//ltdc刷新缓冲
+static uint32_t Layer0_Buffer;//ltdc刷新缓冲地址
 
 /* USER CODE END 0 */
 
@@ -106,7 +106,7 @@ void HAL_LTDC_MspInit(LTDC_HandleTypeDef* ltdcHandle)
     PeriphClkInitStruct.PLL3.PLL3N = 396;
     PeriphClkInitStruct.PLL3.PLL3P = 2;
     PeriphClkInitStruct.PLL3.PLL3Q = 2;
-    PeriphClkInitStruct.PLL3.PLL3R = 12;
+    PeriphClkInitStruct.PLL3.PLL3R = 9;
     PeriphClkInitStruct.PLL3.PLL3RGE = RCC_PLL3VCIRANGE_0;
     PeriphClkInitStruct.PLL3.PLL3VCOSEL = RCC_PLL3VCOWIDE;
     PeriphClkInitStruct.PLL3.PLL3FRACN = 0;

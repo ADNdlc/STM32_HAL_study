@@ -8,8 +8,6 @@
 #include "ltdc.h"
 #include "LCD.h"
 
-__IO uint32_t vsync_count = 0;
-
 static uint16_t ltdc_buf_1[800][480] __attribute__((section(".sdram_section"), aligned(16)));
 static uint16_t ltdc_buf_2[800][480] __attribute__((section(".sdram_section"), aligned(16)));
 static uint16_t* front_buf = ltdc_buf_1;
@@ -17,7 +15,6 @@ static uint16_t* back_buf = ltdc_buf_2;
 
 uint16_t* get_BackBuf(void){
 	return back_buf;
-	//return front_buf;
 }
 
 uint16_t* get_FrontBuf(void){
@@ -31,18 +28,18 @@ static void exchange_BackFront(void){
 	back_buf = temp;
 }
 
-/*	ltdc行中断
+/*	ltdc行中断回调
  * 	配置为0行中断(垂直消隐周期)
  */
 void HAL_LTDC_LineEventCallback(LTDC_HandleTypeDef *ltdc)
 {
-	vsync_count++;
 	exchange_BackFront();
 
-	// 立即设置新缓冲区地址
+	// 设置新缓冲区地址,不需要只要交换地址
 	//HAL_LTDC_SetAddress_NoReload(&hltdc, (uint32_t)front_buf, 0);
-	HAL_LTDC_SetAddress(&ltdc, (uint32_t)front_buf, 0);
+	//HAL_LTDC_SetAddress(&ltdc, (uint32_t)front_buf, 0);
 }
+
 
 
 /* 画点函数[800]x[480]屏幕
@@ -135,15 +132,43 @@ void DMA2D_Copy(void * pSrc,
 	DMA2D->FGPFCCR = LTDC_PIXEL_FORMAT_RGB565;
 	DMA2D->OPFCCR  = LTDC_PIXEL_FORMAT_RGB565;
 
-	DMA2D->NLR     = (uint32_t)(xSize << 16) | (uint16_t)ySize;
+	DMA2D->NLR     = (uint32_t)(xSize << 16) | (uint16_t)ySize;//行数
 
+	DMA2D->CR |= DMA2D_IT_TC|DMA2D_IT_TE|DMA2D_IT_CE;	//中断:传输完成,两个错误
 	/* 启动传输 */
-	DMA2D->CR   |= DMA2D_CR_START;
+	DMA2D->CR |= DMA2D_CR_START;
 
 	/* 等待DMA2D传输完成 */
 	while (DMA2D->CR & DMA2D_CR_START) {}
 }
 
+void DMA2D_Copy_IT(void * pSrc,
+				void * pDst,
+				uint32_t xSize,
+				uint32_t ySize,
+				uint32_t OffLineSrc,
+				uint32_t OffLineDst,
+				uint32_t PixelFormat)
+{
+	DMA2D->IFCR = 0x3FUL;	// 清除中断标志
+
+	/* DMA2D采用存储器到存储器模式, 这种模式是前景层作为DMA2D输入 */
+	DMA2D->CR      = 0x00000000UL | (1 << 9);
+	DMA2D->FGMAR   = (uint32_t)pSrc;// 前景地址(源)
+	DMA2D->OMAR    = (uint32_t)pDst;// 目标地址
+	DMA2D->FGOR    = OffLineSrc;	// 前景偏移
+	DMA2D->OOR     = OffLineDst;	// 输出地址偏移
+
+	/* 前景层和输出区域都采用的RGB565颜色格式 */
+	DMA2D->FGPFCCR = LTDC_PIXEL_FORMAT_RGB565;
+	DMA2D->OPFCCR  = LTDC_PIXEL_FORMAT_RGB565;
+
+	DMA2D->NLR     = (uint32_t)(xSize << 16) | (uint16_t)ySize; //行数
+
+	DMA2D->CR |= DMA2D_CR_TCIE | DMA2D_CR_TEIE;	 //中断:传输完成,传输错误
+	/* 启动传输 */
+	DMA2D->CR |= DMA2D_CR_START;
+}
 
 //void LTDC_Color_Fill(uint16_t sx,uint16_t sy,uint16_t ex,uint16_t ey,uint16_t* source,uint32_t target)
 //{

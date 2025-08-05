@@ -30,6 +30,15 @@ void DMA2D_Copy(void * pSrc,
 				uint32_t OffLineSrc,
 				uint32_t OffLineDst,
 				uint32_t PixelFormat);
+
+void DMA2D_Copy_IT(void * pSrc,
+				void * pDst,
+				uint32_t xSize,
+				uint32_t ySize,
+				uint32_t OffLineSrc,
+				uint32_t OffLineDst,
+				uint32_t PixelFormat);
+
 //void LTDC_Color_Fill(uint16_t sx,uint16_t sy,uint16_t ex,uint16_t ey,uint16_t* color,uint32_t buffer);
 
 #endif /* RGBLCD_LCD_H_ */

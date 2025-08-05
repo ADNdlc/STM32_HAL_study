@@ -191,12 +191,15 @@ void delay_ms(uint16_t nms)
 
 #endif
 
+#define refHALDelay 0
 /**
  * @brief HAL 库延时函数重定义
  * @param Delay 要延时的毫秒数
  * @retval None
  */
+#if refHALDelay
 void HAL_Delay(uint32_t Delay)
 {
     delay_ms(Delay);
 }
+#endif

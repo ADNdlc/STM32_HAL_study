@@ -72,10 +72,6 @@ void HAL_DMA2D_MspInit(DMA2D_HandleTypeDef* dma2dHandle)
   /* USER CODE END DMA2D_MspInit 0 */
     /* DMA2D clock enable */
     __HAL_RCC_DMA2D_CLK_ENABLE();
-
-    /* DMA2D interrupt Init */
-    HAL_NVIC_SetPriority(DMA2D_IRQn, 1, 0);
-    HAL_NVIC_EnableIRQ(DMA2D_IRQn);
   /* USER CODE BEGIN DMA2D_MspInit 1 */
 
   /* USER CODE END DMA2D_MspInit 1 */
@@ -87,17 +83,18 @@ void HAL_DMA2D_MspDeInit(DMA2D_HandleTypeDef* dma2dHandle)
 
   if(dma2dHandle->Instance==DMA2D)
   {
-  /* USER CODE BEGIN DMA2D_MspDeInit 0 */
+	/* USER CODE BEGIN DMA2D_MspDeInit 0 */
 
-  /* USER CODE END DMA2D_MspDeInit 0 */
-    /* Peripheral clock disable */
+	/* USER CODE END DMA2D_MspDeInit 0 */
+	/* Peripheral clock disable */
     __HAL_RCC_DMA2D_CLK_DISABLE();
 
     /* DMA2D interrupt Deinit */
     HAL_NVIC_DisableIRQ(DMA2D_IRQn);
-  /* USER CODE BEGIN DMA2D_MspDeInit 1 */
 
-  /* USER CODE END DMA2D_MspDeInit 1 */
+	/* USER CODE BEGIN DMA2D_MspDeInit 1 */
+
+	/* USER CODE END DMA2D_MspDeInit 1 */
   }
 }
 

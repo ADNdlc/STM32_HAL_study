@@ -23,7 +23,10 @@
 #include "stm32h7xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-__IO uint32_t LTDCcount = 0;
+
+#include "lv_port_disp.h"
+extern lv_disp_drv_t* it_disp_drv;//显示屏句柄
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -311,7 +314,7 @@ void LTDC_IRQHandler(void)
 void LTDC_ER_IRQHandler(void)
 {
   /* USER CODE BEGIN LTDC_ER_IRQn 0 */
-	LTDCcount++;
+
   /* USER CODE END LTDC_ER_IRQn 0 */
   HAL_LTDC_IRQHandler(&hltdc);
   /* USER CODE BEGIN LTDC_ER_IRQn 1 */
@@ -325,6 +328,19 @@ void LTDC_ER_IRQHandler(void)
 void DMA2D_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA2D_IRQn 0 */
+	// 检查“传输完成”中断标志
+	if ((DMA2D->ISR & DMA2D_FLAG_TC) != 0){
+		DMA2D->IFCR = DMA2D_FLAG_TC;// 清除“传输完成”中断标志位
+		if (it_disp_drv != NULL) {
+			lv_disp_flush_ready(it_disp_drv);// 调用 lv_disp_flush_ready()
+		}
+	}
+	else if ((DMA2D->ISR & DMA2D_FLAG_TE) != 0){ // 处理可能发生的错误中断
+		DMA2D->IFCR = DMA2D_FLAG_TE;// 清除“传输错误”中断标志位
+		if (it_disp_drv != NULL) {
+			lv_disp_flush_ready(it_disp_drv);
+		}
+	}
 
   /* USER CODE END DMA2D_IRQn 0 */
   HAL_DMA2D_IRQHandler(&hdma2d);
