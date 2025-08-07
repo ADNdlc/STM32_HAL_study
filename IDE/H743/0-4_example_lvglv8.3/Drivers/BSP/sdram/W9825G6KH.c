@@ -30,8 +30,8 @@ void SDRAM_InitSequence(void)
 
 	/* Step 1 ----------------------------------------------------------------*/
 	/* 配置命令：开启提供给SDRAM的时钟 */
-	Command.CommandMode = FMC_SDRAM_CMD_CLK_ENABLE; //时钟配置使能
-	Command.CommandTarget = FMC_SDRAM_CMD_TARGET_BANK1;     //目标SDRAM存储区域
+	Command.CommandMode = FMC_SDRAM_CMD_CLK_ENABLE; 	//时钟配置使能
+	Command.CommandTarget = FMC_SDRAM_CMD_TARGET_BANK1; //目标SDRAM存储区域
 	Command.AutoRefreshNumber = 1;
 	Command.ModeRegisterDefinition = 0;
 	/* 发送配置命令 */
@@ -61,11 +61,11 @@ void SDRAM_InitSequence(void)
 
 	/* Step 5 ----------------------------------------------------------------*/
 	/* 设置sdram寄存器配置 */
-	tmpr = (uint32_t)SDRAM_MODEREG_BURST_LENGTH_1        |  //设置突发长度:1(可以是1/2/4/8)
+	tmpr = (uint32_t)SDRAM_MODEREG_BURST_LENGTH_8        |  //设置突发长度:1(可以是1/2/4/8)
 				   SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL   |  //设置突发类型:连续(可以是连续/间隔)
 				   SDRAM_MODEREG_CAS_LATENCY_2           |  //设置CAS值:3(可以是2/3)
 				   SDRAM_MODEREG_OPERATING_MODE_STANDARD |  //设置操作模式:0,标准模式
-				   SDRAM_MODEREG_WRITEBURST_MODE_SINGLE;    //设置突发写模式:1,单点访问
+				   SDRAM_MODEREG_WRITEBURST_MODE_SINGLE;//设置突发写模式:1,连续访问
 
 	/* 配置命令：设置SDRAM寄存器 */
 	Command.CommandMode = FMC_SDRAM_CMD_LOAD_MODE;  //加载模式寄存器命令

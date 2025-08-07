@@ -6,7 +6,7 @@ extern "C"
 {
 #endif
 
-//#define NDEBUG /* DEBUG测试 */
+    // #define NDEBUG /* DEBUG测试 */
 
 #include "lvgl.h"
 #include <assert.h> //断言
@@ -18,7 +18,7 @@ extern "C"
 #define scr_act_height() lv_obj_get_height(lv_scr_act()) // 获取屏幕高度
 
     struct activity_t; // 活动声明
-/* -------------------------------------------- 应用接口定义 --------------------------------------------- */
+                       /* -------------------------------------------- 应用接口定义 --------------------------------------------- */
     // 定义活动生命周期回调函数指针
     // 这些接口函数由每个具体的应用去实现
     typedef lv_obj_t *(*app_create_cb)(void);                    // 创建UI (返回屏幕对象)
@@ -27,7 +27,8 @@ extern "C"
     typedef void (*app_resume_cb)(struct activity_t *activity);  // 恢复 (当返回到此活动时调用)
 
     // 应用定义结构体 (应用的“类”)
-    typedef struct{
+    typedef struct
+    {
         const char *name;       // 活动的唯一名称/ID
         const void *icon;       // 指向图标资源的指针
         app_create_cb create;   // 创建UI
@@ -82,6 +83,18 @@ extern "C"
      * @param bright 0~100
      */
     uint8_t brightness_get_value(void);
+
+    /**
+     * @brief 获取当前的音量值
+     * @return 0~100
+     */
+    uint8_t volume_get_value(void);
+
+    /**
+     * @brief 设置当前的音量值
+     * @param vol 0~100
+     */
+    void volume_set_value(uint8_t vol);
 
     /**
      * @brief 根据名称查找已注册的app
